@@ -1,4 +1,4 @@
-/// CleanIT — Cleaning Request Model
+// CleanIT — Cleaning Request Model
 
 enum RequestStatus {
   open,

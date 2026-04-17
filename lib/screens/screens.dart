@@ -1,4 +1,4 @@
-/// CleanIT — Barrel file for all screens
+// CleanIT — Barrel file for all screens
 export 'auth_screen.dart';
 export 'student_home_screen.dart';
 export 'new_request_screen.dart';

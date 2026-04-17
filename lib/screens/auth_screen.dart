@@ -1,7 +1,7 @@
-/// CleanIT — Auth Screen
-///
-/// Login / Sign-up screen with role selection (Student or Cleaner).
-/// Premium glassmorphic card design with animated transitions.
+// CleanIT — Auth Screen
+//
+// Login / Sign-up screen with role selection (Student or Cleaner).
+// Premium glassmorphic card design with animated transitions.
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -164,11 +164,11 @@ class _AuthScreenState extends State<AuthScreen>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                AppTheme.blue.withOpacity(0.3),
-                AppTheme.mauve.withOpacity(0.2),
+                AppTheme.blue.withValues(alpha: 0.3),
+                AppTheme.mauve.withValues(alpha: 0.2),
               ],
             ),
-            border: Border.all(color: AppTheme.blue.withOpacity(0.4)),
+            border: Border.all(color: AppTheme.blue.withValues(alpha: 0.4)),
           ),
           child: const Icon(
             Icons.cleaning_services_rounded,
@@ -207,7 +207,7 @@ class _AuthScreenState extends State<AuthScreen>
         border: Border.all(color: AppTheme.surface0),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 30,
             offset: const Offset(0, 10),
           ),
@@ -382,8 +382,8 @@ class _AuthScreenState extends State<AuthScreen>
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
             color: isSelected
-                ? AppTheme.blue.withOpacity(0.15)
-                : AppTheme.surface0.withOpacity(0.5),
+                ? AppTheme.blue.withValues(alpha: 0.15)
+                : AppTheme.surface0.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: isSelected ? AppTheme.blue : AppTheme.surface0,

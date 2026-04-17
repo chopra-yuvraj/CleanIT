@@ -1,11 +1,11 @@
-/// CleanIT — Active Job Screen (Student Side)
-///
-/// Shows the student's active request status with:
-/// - Real-time status indicator
-/// - Assigned cleaner info
-/// - "Show QR to Cleaner" button (generates time-limited QR)
-/// - QR countdown timer (3-minute expiry)
-/// - Feedback prompt after completion
+// CleanIT — Active Job Screen (Student Side)
+//
+// Shows the student's active request status with:
+// - Real-time status indicator
+// - Assigned cleaner info
+// - "Show QR to Cleaner" button (generates time-limited QR)
+// - QR countdown timer (3-minute expiry)
+// - Feedback prompt after completion
 
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -143,7 +143,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
               height: 64,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppTheme.red.withOpacity(0.15),
+                color: AppTheme.red.withValues(alpha: 0.15),
               ),
               child: const Icon(Icons.lock_rounded,
                   color: AppTheme.red, size: 32),
@@ -284,7 +284,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: isActive
-                        ? _statusColor.withOpacity(isCurrent ? 0.3 : 0.1)
+                        ? _statusColor.withValues(alpha: isCurrent ? 0.3 : 0.1)
                         : AppTheme.surface0,
                     border: isCurrent
                         ? Border.all(color: _statusColor, width: 2)
@@ -377,7 +377,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
         children: [
           CircleAvatar(
             radius: 22,
-            backgroundColor: AppTheme.green.withOpacity(0.2),
+            backgroundColor: AppTheme.green.withValues(alpha: 0.2),
             child: const Icon(Icons.person, color: AppTheme.green, size: 22),
           ),
           const SizedBox(width: 14),
@@ -452,7 +452,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           decoration: BoxDecoration(
             color: isExpiring
-                ? AppTheme.red.withOpacity(0.15)
+                ? AppTheme.red.withValues(alpha: 0.15)
                 : AppTheme.base,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
@@ -507,7 +507,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                   height: 80,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppTheme.green.withOpacity(0.15),
+                    color: AppTheme.green.withValues(alpha: 0.15),
                   ),
                   child: const Icon(Icons.check_circle_rounded,
                       color: AppTheme.green, size: 48),

@@ -1,7 +1,7 @@
-/// CleanIT — QR Service
-///
-/// Generates HMAC-signed, time-limited QR payloads for verification
-/// and validates incoming QR data on the client side (optional pre-check).
+// CleanIT — QR Service
+//
+// Generates HMAC-signed, time-limited QR payloads for verification
+// and validates incoming QR data on the client side (optional pre-check).
 
 import 'dart:convert';
 import 'package:crypto/crypto.dart';

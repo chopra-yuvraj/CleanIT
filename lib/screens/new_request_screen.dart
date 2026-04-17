@@ -1,10 +1,10 @@
-/// CleanIT — New Request Screen
-///
-/// Student creates a new cleaning request with:
-/// - Two massive toggle buttons: Floor Sweeping | Wet Mopping
-/// - Urgent switch (UI accents turn red when toggled)
-/// - Notes text box
-/// - "Broadcast Request to Cleaners" submit button
+// CleanIT — New Request Screen
+//
+// Student creates a new cleaning request with:
+// - Two massive toggle buttons: Floor Sweeping | Wet Mopping
+// - Urgent switch (UI accents turn red when toggled)
+// - Notes text box
+// - "Broadcast Request to Cleaners" submit button
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -154,7 +154,7 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
             height: 44,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: _accentColor.withOpacity(0.15),
+              color: _accentColor.withValues(alpha: 0.15),
             ),
             child: Icon(Icons.meeting_room_rounded,
                 color: _accentColor, size: 22),
@@ -232,7 +232,7 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
         height: 130,
         decoration: BoxDecoration(
           color: isSelected
-              ? _accentColor.withOpacity(0.12)
+              ? _accentColor.withValues(alpha: 0.12)
               : AppTheme.base,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
@@ -250,8 +250,8 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isSelected
-                    ? _accentColor.withOpacity(0.2)
-                    : AppTheme.surface0.withOpacity(0.5),
+                    ? _accentColor.withValues(alpha: 0.2)
+                    : AppTheme.surface0.withValues(alpha: 0.5),
               ),
               child: Icon(
                 icon,
@@ -284,8 +284,8 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
         gradient: _isUrgent
             ? LinearGradient(
                 colors: [
-                  AppTheme.red.withOpacity(0.15),
-                  AppTheme.red.withOpacity(0.05),
+                  AppTheme.red.withValues(alpha: 0.15),
+                  AppTheme.red.withValues(alpha: 0.05),
                 ],
               )
             : null,
@@ -293,7 +293,7 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _isUrgent
-              ? AppTheme.red.withOpacity(0.4)
+              ? AppTheme.red.withValues(alpha: 0.4)
               : AppTheme.surface0,
           width: _isUrgent ? 2 : 1,
         ),
@@ -326,7 +326,7 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
                   style: TextStyle(
                     fontSize: 12,
                     color: _isUrgent
-                        ? AppTheme.red.withOpacity(0.7)
+                        ? AppTheme.red.withValues(alpha: 0.7)
                         : AppTheme.overlay0,
                   ),
                 ),
@@ -336,8 +336,8 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
           Switch.adaptive(
             value: _isUrgent,
             onChanged: (v) => setState(() => _isUrgent = v),
-            activeColor: AppTheme.red,
-            activeTrackColor: AppTheme.red.withOpacity(0.3),
+            activeThumbColor: AppTheme.red,
+            activeTrackColor: AppTheme.red.withValues(alpha: 0.3),
           ),
         ],
       ),
@@ -353,7 +353,7 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
       decoration: InputDecoration(
         hintText:
             'e.g., "Please be mindful of the glass on the floor" or "I am studying, please be quiet"',
-        hintStyle: TextStyle(color: AppTheme.overlay0.withOpacity(0.6)),
+        hintStyle: TextStyle(color: AppTheme.overlay0.withValues(alpha: 0.6)),
         counterStyle: const TextStyle(color: AppTheme.overlay0),
       ),
     );

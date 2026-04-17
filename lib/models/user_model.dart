@@ -1,4 +1,4 @@
-/// CleanIT — User Model
+// CleanIT — User Model
 
 enum UserRole { student, cleaner, admin }
 

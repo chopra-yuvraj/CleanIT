@@ -1,7 +1,7 @@
-/// CleanIT — Request Service
-///
-/// Handles all cleaning request operations: create, fetch, accept,
-/// start, complete, report-locked, and real-time subscriptions.
+// CleanIT — Request Service
+//
+// Handles all cleaning request operations: create, fetch, accept,
+// start, complete, report-locked, and real-time subscriptions.
 
 import 'dart:convert';
 import 'package:flutter/foundation.dart';

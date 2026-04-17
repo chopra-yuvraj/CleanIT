@@ -1,10 +1,10 @@
-/// CleanIT — Student Home Screen
-///
-/// Main dashboard for students with:
-/// - "Request Room Cleaning" hero button
-/// - Alert banner for failed/cancelled requests
-/// - Active job card (if a request is in progress)
-/// - Recent request history
+// CleanIT — Student Home Screen
+//
+// Main dashboard for students with:
+// - "Request Room Cleaning" hero button
+// - Alert banner for failed/cancelled requests
+// - Active job card (if a request is in progress)
+// - Recent request history
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -214,12 +214,12 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppTheme.red.withOpacity(0.15),
-            AppTheme.red.withOpacity(0.05),
+            AppTheme.red.withValues(alpha: 0.15),
+            AppTheme.red.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.red.withOpacity(0.3)),
+        border: Border.all(color: AppTheme.red.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -228,7 +228,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             height: 40,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppTheme.red.withOpacity(0.2),
+              color: AppTheme.red.withValues(alpha: 0.2),
             ),
             child: const Icon(Icons.warning_amber_rounded,
                 color: AppTheme.red, size: 22),
@@ -251,7 +251,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                   'Your cleaner arrived, but your room was locked.',
                   style: GoogleFonts.outfit(
                     fontSize: 13,
-                    color: AppTheme.text.withOpacity(0.8),
+                    color: AppTheme.text.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -273,12 +273,12 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppTheme.blue.withOpacity(0.15),
-              AppTheme.mauve.withOpacity(0.1),
+              AppTheme.blue.withValues(alpha: 0.15),
+              AppTheme.mauve.withValues(alpha: 0.1),
             ],
           ),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.blue.withOpacity(0.3)),
+          border: Border.all(color: AppTheme.blue.withValues(alpha: 0.3)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -350,19 +350,19 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             end: Alignment.bottomRight,
             colors: hasActive
                 ? [
-                    AppTheme.green.withOpacity(0.2),
-                    AppTheme.teal.withOpacity(0.1),
+                    AppTheme.green.withValues(alpha: 0.2),
+                    AppTheme.teal.withValues(alpha: 0.1),
                   ]
                 : [
-                    AppTheme.blue.withOpacity(0.25),
-                    AppTheme.mauve.withOpacity(0.15),
+                    AppTheme.blue.withValues(alpha: 0.25),
+                    AppTheme.mauve.withValues(alpha: 0.15),
                   ],
           ),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: hasActive
-                ? AppTheme.green.withOpacity(0.3)
-                : AppTheme.blue.withOpacity(0.3),
+                ? AppTheme.green.withValues(alpha: 0.3)
+                : AppTheme.blue.withValues(alpha: 0.3),
             width: 1.5,
           ),
         ),
@@ -440,7 +440,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             height: 40,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: _statusColor(r.status).withOpacity(0.15),
+              color: _statusColor(r.status).withValues(alpha: 0.15),
             ),
             child: Icon(
               r.status == RequestStatus.completed

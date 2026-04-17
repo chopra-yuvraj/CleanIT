@@ -1,7 +1,7 @@
-/// CleanIT — Main Entry Point
-///
-/// Initializes Firebase (mobile only), Supabase, and FCM.
-/// Routes to auth screen or the appropriate role-based dashboard.
+// CleanIT — Main Entry Point
+//
+// Initializes Firebase (mobile only), Supabase, and FCM.
+// Routes to auth screen or the appropriate role-based dashboard.
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -144,7 +144,7 @@ class _AuthGateState extends State<_AuthGate> {
                 height: 72,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppTheme.blue.withOpacity(0.1),
+                  color: AppTheme.blue.withValues(alpha: 0.1),
                 ),
                 child: const Icon(
                   Icons.cleaning_services_rounded,

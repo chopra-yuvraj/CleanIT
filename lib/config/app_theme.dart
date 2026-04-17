@@ -1,6 +1,6 @@
-/// CleanIT — Theme Configuration
-///
-/// Catppuccin Mocha-inspired dark theme with premium aesthetics.
+// CleanIT — Theme Configuration
+//
+// Catppuccin Mocha-inspired dark theme with premium aesthetics.
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';

@@ -339,8 +339,8 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
                   colors: [
-                    const Color(0xFFA6E3A1).withOpacity(0.3),
-                    const Color(0xFFA6E3A1).withOpacity(0.1),
+                    const Color(0xFFA6E3A1).withValues(alpha: 0.3),
+                    const Color(0xFFA6E3A1).withValues(alpha: 0.1),
                   ],
                 ),
               ),
@@ -519,19 +519,19 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
             end: Alignment.bottomRight,
             colors: _job.isUrgent
                 ? [
-                    const Color(0xFFFF6B6B).withOpacity(0.25),
-                    const Color(0xFFEE5A24).withOpacity(0.15),
+                    const Color(0xFFFF6B6B).withValues(alpha: 0.25),
+                    const Color(0xFFEE5A24).withValues(alpha: 0.15),
                   ]
                 : [
-                    const Color(0xFF89B4FA).withOpacity(0.15),
-                    const Color(0xFFCBA6F7).withOpacity(0.1),
+                    const Color(0xFF89B4FA).withValues(alpha: 0.15),
+                    const Color(0xFFCBA6F7).withValues(alpha: 0.1),
                   ],
           ),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: _job.isUrgent
-                ? const Color(0xFFFF6B6B).withOpacity(0.4)
-                : const Color(0xFF89B4FA).withOpacity(0.2),
+                ? const Color(0xFFFF6B6B).withValues(alpha: 0.4)
+                : const Color(0xFF89B4FA).withValues(alpha: 0.2),
             width: 1.5,
           ),
         ),
@@ -570,7 +570,7 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
               height: 64,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withValues(alpha: 0.1),
               ),
               child: Icon(
                 Icons.meeting_room_rounded,
@@ -696,7 +696,7 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
         children: [
           CircleAvatar(
             radius: 22,
-            backgroundColor: const Color(0xFFCBA6F7).withOpacity(0.2),
+            backgroundColor: const Color(0xFFCBA6F7).withValues(alpha: 0.2),
             child: Text(
               _job.studentName.isNotEmpty ? _job.studentName[0].toUpperCase() : '?',
               style: const TextStyle(
@@ -743,7 +743,7 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.4),
+            color: Colors.black.withValues(alpha: 0.4),
             blurRadius: 20,
             offset: const Offset(0, -4),
           ),
@@ -864,7 +864,7 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
               height: 260,
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: const Color(0xFFA6E3A1).withOpacity(0.7),
+                  color: const Color(0xFFA6E3A1).withValues(alpha: 0.7),
                   width: 3,
                 ),
                 borderRadius: BorderRadius.circular(24),
@@ -879,7 +879,7 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.7),
+                color: Colors.black.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: const Text(

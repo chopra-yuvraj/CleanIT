@@ -1,11 +1,11 @@
-/// CleanIT — Cleaner Dashboard Screen
-///
-/// Live radar for cleaners showing:
-/// - On-duty toggle
-/// - Incoming broadcast pop-up modals for new requests
-/// - Active jobs queue
-/// - Accept/decline real-time interactions
-/// - Navigation to job details
+// CleanIT — Cleaner Dashboard Screen
+//
+// Live radar for cleaners showing:
+// - On-duty toggle
+// - Incoming broadcast pop-up modals for new requests
+// - Active jobs queue
+// - Accept/decline real-time interactions
+// - Navigation to job details
 
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -202,8 +202,8 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: request.isUrgent
-                      ? AppTheme.red.withOpacity(0.15)
-                      : AppTheme.blue.withOpacity(0.15),
+                      ? AppTheme.red.withValues(alpha: 0.15)
+                      : AppTheme.blue.withValues(alpha: 0.15),
                 ),
                 child: Icon(Icons.meeting_room_rounded,
                     color: request.isUrgent ? AppTheme.red : AppTheme.blue,
@@ -238,7 +238,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppTheme.surface0.withOpacity(0.5),
+                    color: AppTheme.surface0.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
@@ -385,11 +385,11 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
         color: _isOnDuty
-            ? AppTheme.green.withOpacity(0.1)
+            ? AppTheme.green.withValues(alpha: 0.1)
             : AppTheme.base,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: _isOnDuty ? AppTheme.green.withOpacity(0.3) : AppTheme.surface0,
+          color: _isOnDuty ? AppTheme.green.withValues(alpha: 0.3) : AppTheme.surface0,
         ),
       ),
       child: Row(
@@ -403,7 +403,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
               boxShadow: _isOnDuty
                   ? [
                       BoxShadow(
-                          color: AppTheme.green.withOpacity(0.5),
+                          color: AppTheme.green.withValues(alpha: 0.5),
                           blurRadius: 8)
                     ]
                   : null,
@@ -428,7 +428,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
                       : 'Not receiving requests',
                   style: TextStyle(
                       fontSize: 12,
-                      color: AppTheme.overlay0.withOpacity(0.8)),
+                      color: AppTheme.overlay0.withValues(alpha: 0.8)),
                 ),
               ],
             ),
@@ -436,8 +436,8 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
           Switch.adaptive(
             value: _isOnDuty,
             onChanged: _toggleOnDuty,
-            activeColor: AppTheme.green,
-            activeTrackColor: AppTheme.green.withOpacity(0.3),
+            activeThumbColor: AppTheme.green,
+            activeTrackColor: AppTheme.green.withValues(alpha: 0.3),
           ),
         ],
       ),
@@ -465,12 +465,12 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              AppTheme.green.withOpacity(0.1),
-              AppTheme.teal.withOpacity(0.05),
+              AppTheme.green.withValues(alpha: 0.1),
+              AppTheme.teal.withValues(alpha: 0.05),
             ],
           ),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.green.withOpacity(0.25)),
+          border: Border.all(color: AppTheme.green.withValues(alpha: 0.25)),
         ),
         child: Row(
           children: [
@@ -479,7 +479,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
               height: 44,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppTheme.green.withOpacity(0.15),
+                color: AppTheme.green.withValues(alpha: 0.15),
               ),
               child: const Icon(Icons.meeting_room_rounded,
                   color: AppTheme.green, size: 22),
@@ -534,7 +534,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: r.isUrgent
-              ? AppTheme.red.withOpacity(0.4)
+              ? AppTheme.red.withValues(alpha: 0.4)
               : AppTheme.surface0,
           width: r.isUrgent ? 2 : 1,
         ),
@@ -624,7 +624,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: AppTheme.green
-                        .withOpacity(1.0 - _radarController.value),
+                        .withValues(alpha: 1.0 - _radarController.value),
                     width: 2,
                   ),
                 ),
@@ -634,7 +634,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
                     height: 40,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppTheme.green.withOpacity(0.1),
+                      color: AppTheme.green.withValues(alpha: 0.1),
                     ),
                     child:
                         const Icon(Icons.radar, color: AppTheme.green, size: 24),

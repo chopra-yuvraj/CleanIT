@@ -1,7 +1,7 @@
-/// CleanIT — App Configuration
-///
-/// Centralized config for Supabase, QR signing, and feature flags.
-/// Values are injected at build time via --dart-define.
+// CleanIT — App Configuration
+//
+// Centralized config for Supabase, QR signing, and feature flags.
+// Values are injected at build time via --dart-define.
 
 class AppConfig {
   AppConfig._();
