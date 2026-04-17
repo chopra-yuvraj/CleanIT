@@ -79,6 +79,7 @@ class _AuthScreenState extends State<AuthScreen>
           email: _emailController.text.trim(),
           password: _passwordController.text,
         );
+      }
       AppUser? profile;
       if (_isLogin) {
         profile = auth.currentProfile ?? await auth.fetchProfile();
