@@ -8,10 +8,10 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { GoogleAuth } from "npm:google-auth-library@9.0.0";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const FCM_SERVER_KEY = Deno.env.get("FCM_SERVER_KEY")!;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -189,26 +189,61 @@ async function sendFCMMulticast(
   }
 ) {
   try {
-    await fetch("https://fcm.googleapis.com/fcm/send", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `key=${FCM_SERVER_KEY}`,
+    const serviceAccountRaw = Deno.env.get("FCM_SERVICE_ACCOUNT");
+    if (!serviceAccountRaw) {
+      console.error("Missing FCM_SERVICE_ACCOUNT");
+      return;
+    }
+    const fcmCredentials = JSON.parse(serviceAccountRaw);
+
+    const auth = new GoogleAuth({
+      credentials: {
+        client_email: fcmCredentials.client_email,
+        private_key: fcmCredentials.private_key,
       },
-      body: JSON.stringify({
-        registration_ids: tokens,
-        notification: {
-          title: notification.title,
-          body: notification.body,
-          sound: notification.android_channel_id === "urgent_requests"
-            ? "siren.wav"
-            : "default",
-          android_channel_id: notification.android_channel_id || "normal_requests",
-        },
-        data: notification.data || {},
-        priority: "high",
-      }),
+      scopes: ["https://www.googleapis.com/auth/firebase.messaging"],
     });
+
+    const client = await auth.getClient();
+    const accessTokenObj = await client.getAccessToken();
+    const accessToken = accessTokenObj.token;
+    const projectId = fcmCredentials.project_id;
+    const endpoint = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
+
+    await Promise.all(
+      tokens.map(async (token) => {
+        const payload = {
+          message: {
+            token: token,
+            notification: {
+              title: notification.title,
+              body: notification.body,
+            },
+            android: {
+              notification: {
+                sound: notification.android_channel_id === "urgent_requests" ? "siren.wav" : "default",
+                channel_id: notification.android_channel_id || "normal_requests",
+              },
+            },
+            data: notification.data || {},
+          },
+        };
+
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          console.error(`Failed to send FCM to ${token}:`, text);
+        }
+      })
+    );
   } catch (err) {
     console.error("FCM multicast failed:", err);
   }

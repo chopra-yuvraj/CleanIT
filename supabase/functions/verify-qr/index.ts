@@ -12,7 +12,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   decode as base64Decode,
 } from "https://deno.land/std@0.177.0/encoding/base64.ts";
-import { hmac } from "https://deno.land/x/hmac@v2.0.1/mod.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -24,6 +23,26 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// ── HMAC-SHA256 using Web Crypto API ──
+async function hmacSha256Hex(secret: string, message: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(secret);
+  const msgData = encoder.encode(message);
+
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+
+  const signature = await crypto.subtle.sign("HMAC", cryptoKey, msgData);
+  return Array.from(new Uint8Array(signature))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -115,9 +134,9 @@ serve(async (req: Request) => {
       });
     }
 
-    // ── 6. Verify HMAC signature ──
+    // ── 6. Verify HMAC signature (using Web Crypto API) ──
     const payload = `${qrData.request_id}:${qrData.student_id}:${qrData.timestamp}`;
-    const expectedSignature = hmac("sha256", QR_SECRET, payload, "utf8", "hex");
+    const expectedSignature = await hmacSha256Hex(QR_SECRET, payload);
 
     if (qrData.signature !== expectedSignature) {
       return jsonResponse(400, {

@@ -1,0 +1,55 @@
+# ── Dependencies ──
+node_modules/
+.dart_tool/
+.packages
+
+# ── Flutter / Dart ──
+build/
+*.iml
+*.lock
+!pubspec.lock
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# ── Environment & Secrets ──
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+google-services.json
+GoogleService-Info.plist
+
+# ── Firebase ──
+*-firebase-adminsdk-*.json
+firebase-service-account.json
+.firebase/
+
+# ── Vercel ──
+.vercel/
+
+# ── Supabase local cache ──
+supabase/.temp/
+
+# ── IDE ──
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Logs ──
+*.log
+npm-debug.log*
+
+# ── Coverage ──
+coverage/
+
+# ── Build scripts with secrets (safety net) ──
+build-apk.bat
+run.bat

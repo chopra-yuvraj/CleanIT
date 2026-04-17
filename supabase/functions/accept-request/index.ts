@@ -9,10 +9,10 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { GoogleAuth } from "npm:google-auth-library@9.0.0";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const FCM_SERVER_KEY = Deno.env.get("FCM_SERVER_KEY")!;
 
 // ── CORS Headers ──
 const corsHeaders = {
@@ -161,22 +161,48 @@ async function sendFCM(
   notification: { title: string; body: string; data?: Record<string, string> }
 ) {
   try {
-    await fetch("https://fcm.googleapis.com/fcm/send", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `key=${FCM_SERVER_KEY}`,
+    const serviceAccountRaw = Deno.env.get("FCM_SERVICE_ACCOUNT");
+    if (!serviceAccountRaw) {
+      console.error("Missing FCM_SERVICE_ACCOUNT");
+      return;
+    }
+    const fcmCredentials = JSON.parse(serviceAccountRaw);
+
+    const auth = new GoogleAuth({
+      credentials: {
+        client_email: fcmCredentials.client_email,
+        private_key: fcmCredentials.private_key,
       },
-      body: JSON.stringify({
-        to: token,
+      scopes: ["https://www.googleapis.com/auth/firebase.messaging"],
+    });
+
+    const client = await auth.getClient();
+    const accessTokenObj = await client.getAccessToken();
+    const projectId = fcmCredentials.project_id;
+
+    const payload = {
+      message: {
+        token: token,
         notification: {
           title: notification.title,
           body: notification.body,
-          sound: "default",
+        },
+        android: {
+          notification: {
+            sound: "default",
+          },
         },
         data: notification.data || {},
-        priority: "high",
-      }),
+      },
+    };
+
+    await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessTokenObj.token}`,
+      },
+      body: JSON.stringify(payload),
     });
   } catch (err) {
     // FCM failures are non-blocking — log but don't crash the endpoint

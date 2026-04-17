@@ -439,9 +439,9 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
             size: 220,
             backgroundColor: Colors.white,
             eyeStyle: const QrEyeStyle(
-                eyeShape: QrEyeShape.roundedOuter, color: Color(0xFF1E1E2E)),
+                eyeShape: QrEyeShape.square, color: Color(0xFF1E1E2E)),
             dataModuleStyle: const QrDataModuleStyle(
-                dataModuleShape: QrDataModuleShape.roundedOutsideCorners,
+                dataModuleShape: QrDataModuleShape.square,
                 color: Color(0xFF1E1E2E)),
           ),
         ),
