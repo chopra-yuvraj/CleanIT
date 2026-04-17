@@ -1,0 +1,401 @@
+openapi: "3.0.3"
+info:
+  title: CleanIT API
+  description: |
+    REST API for the CleanIT hostel room cleaning application.
+    All endpoints are implemented as Supabase Edge Functions and secured
+    via Supabase Auth JWT tokens passed in the Authorization header.
+  version: "1.0.0"
+  contact:
+    name: CleanIT Team
+
+servers:
+  - url: https://{project-ref}.supabase.co/functions/v1
+    description: Supabase Edge Functions (Production)
+  - url: http://localhost:54321/functions/v1
+    description: Supabase Edge Functions (Local Development)
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ──────────────────────────────────────────────────────────────────
+  #  POST /accept-request — Concurrency-safe job acceptance
+  # ──────────────────────────────────────────────────────────────────
+  /accept-request:
+    post:
+      operationId: acceptRequest
+      summary: Accept a cleaning request (Fastest-Finger-First)
+      description: |
+        Called by a Cleaner to accept an OPEN request. Uses PostgreSQL
+        row-level locking (`SELECT … FOR UPDATE SKIP LOCKED`) inside an
+        atomic database function to guarantee that exactly ONE cleaner
+        wins the race, even when 100+ cleaners tap "Accept" at the
+        exact same millisecond.
+
+        ### Concurrency Model
+        1. The RPC function `accept_request` locks the request row.
+        2. If the row is already locked by another transaction, `SKIP LOCKED`
+           causes this transaction to see zero rows → immediate "already taken" response.
+        3. The winner's transaction updates `requests.status` to `ASSIGNED`
+           and inserts an `assignments` row atomically.
+        4. Supabase Realtime broadcasts the status change to all subscribed
+           cleaner clients, so losers see "already accepted" instantly.
+      tags:
+        - Requests
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptRequestBody"
+            example:
+              request_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+      responses:
+        "200":
+          description: Request accepted successfully — assignment created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcceptRequestResponse"
+              example:
+                success: true
+                assignment_id: "f9e8d7c6-b5a4-3210-fedc-ba0987654321"
+                message: "Request accepted successfully"
+        "409":
+          description: |
+            Conflict — the request was already accepted by another cleaner,
+            or is no longer in OPEN status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                code: "ALREADY_ASSIGNED"
+                message: "This request was already accepted by someone else."
+        "400":
+          description: Bad request — missing or invalid request_id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                code: "INVALID_REQUEST"
+                message: "request_id is required and must be a valid UUID."
+        "401":
+          description: Unauthorized — missing or invalid JWT.
+        "403":
+          description: Forbidden — caller is not a cleaner.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                code: "FORBIDDEN"
+                message: "Only cleaners can accept requests."
+
+  # ──────────────────────────────────────────────────────────────────
+  #  POST /report-locked — Room locked / student absent
+  # ──────────────────────────────────────────────────────────────────
+  /report-locked:
+    post:
+      operationId: reportLocked
+      summary: Report room locked / student absent (with photo proof)
+      description: |
+        Called by the assigned Cleaner when they arrive at the room and
+        find it locked or the student unresponsive. This endpoint:
+
+        1. Validates the cleaner is the assigned cleaner for this request.
+        2. Uploads the proof photo to Supabase Storage (`proof-photos` bucket).
+        3. Updates `requests.status` → `CANCELLED_ROOM_LOCKED`.
+        4. Updates the `assignments` row with `failure_reason` and `proof_image_url`.
+        5. Sends an FCM push notification to the student informing them.
+
+        ### Anti-Abuse
+        The photo upload is **mandatory**. Requests without a photo file
+        are rejected with 400. Admins can audit these photos later.
+      tags:
+        - Requests
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ReportLockedBody"
+            encoding:
+              photo:
+                contentType: image/jpeg, image/png, image/webp
+      responses:
+        "200":
+          description: Room locked report submitted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportLockedResponse"
+              example:
+                success: true
+                message: "Request cancelled. Student has been notified."
+                proof_image_url: "https://xyz.supabase.co/storage/v1/object/public/proof-photos/a1b2c3d4.jpg"
+        "400":
+          description: Bad request — missing photo or invalid request_id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                code: "PHOTO_REQUIRED"
+                message: "A proof photo is required to report a locked room."
+        "401":
+          description: Unauthorized — missing or invalid JWT.
+        "403":
+          description: Forbidden — caller is not the assigned cleaner.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                code: "NOT_ASSIGNED_CLEANER"
+                message: "You are not the assigned cleaner for this request."
+        "404":
+          description: Request not found or not in ASSIGNED/IN_PROGRESS status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                code: "REQUEST_NOT_FOUND"
+                message: "Request not found or not in an active state."
+
+  # ──────────────────────────────────────────────────────────────────
+  #  POST /create-request — Student creates a new cleaning request
+  # ──────────────────────────────────────────────────────────────────
+  /create-request:
+    post:
+      operationId: createRequest
+      summary: Create a new cleaning request
+      description: |
+        Called by a Student to submit a new cleaning request.
+        Validates the student doesn't already have an active request,
+        inserts the request, then broadcasts an FCM notification to
+        all on-duty cleaners.
+      tags:
+        - Requests
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRequestBody"
+            example:
+              is_sweeping: true
+              is_mopping: true
+              is_urgent: false
+              notes: "Please be mindful of the glass on the floor"
+      responses:
+        "201":
+          description: Request created and broadcast to cleaners.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateRequestResponse"
+              example:
+                success: true
+                request_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                message: "Request broadcast to all available cleaners."
+        "409":
+          description: Student already has an active request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                code: "ACTIVE_REQUEST_EXISTS"
+                message: "You already have an active cleaning request."
+        "401":
+          description: Unauthorized.
+
+  # ──────────────────────────────────────────────────────────────────
+  #  POST /verify-qr — QR code verification handshake
+  # ──────────────────────────────────────────────────────────────────
+  /verify-qr:
+    post:
+      operationId: verifyQR
+      summary: Verify QR code to complete a job
+      description: |
+        Called by the Cleaner after scanning the student's QR code.
+        Validates the QR payload signature and expiry (3-minute window),
+        then marks the request as COMPLETED.
+      tags:
+        - Requests
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyQRBody"
+            example:
+              request_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+              qr_payload: "eyJyZXF1ZXN0X2lkIjoiYTFiMmMzZDQiLCJ0aW1lc3RhbXAiOjE3MTMzNTAwMDAsInNpZ25hdHVyZSI6ImFiYzEyMyJ9"
+      responses:
+        "200":
+          description: Job completed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerifyQRResponse"
+              example:
+                success: true
+                message: "Job completed! Student will be prompted for feedback."
+        "410":
+          description: QR code has expired (older than 3 minutes).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                code: "QR_EXPIRED"
+                message: "This QR code has expired. Ask the student to generate a new one."
+        "401":
+          description: Unauthorized.
+
+# ════════════════════════════════════════════════════════════════════
+#  COMPONENTS
+# ════════════════════════════════════════════════════════════════════
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase Auth JWT token
+
+  schemas:
+    # ── Request Bodies ──
+    AcceptRequestBody:
+      type: object
+      required:
+        - request_id
+      properties:
+        request_id:
+          type: string
+          format: uuid
+          description: The UUID of the cleaning request to accept.
+
+    ReportLockedBody:
+      type: object
+      required:
+        - request_id
+        - photo
+      properties:
+        request_id:
+          type: string
+          format: uuid
+          description: The UUID of the assigned cleaning request.
+        photo:
+          type: string
+          format: binary
+          description: JPEG/PNG photo proving the cleaner visited the locked room.
+        failure_reason:
+          type: string
+          default: "room_locked"
+          enum:
+            - room_locked
+            - student_absent
+          description: Reason for cancellation.
+
+    CreateRequestBody:
+      type: object
+      required:
+        - is_sweeping
+        - is_mopping
+      properties:
+        is_sweeping:
+          type: boolean
+          description: Whether floor sweeping is requested.
+        is_mopping:
+          type: boolean
+          description: Whether wet mopping is requested.
+        is_urgent:
+          type: boolean
+          default: false
+          description: Whether this is an urgent request.
+        notes:
+          type: string
+          maxLength: 500
+          description: Optional instructions for the cleaner.
+
+    VerifyQRBody:
+      type: object
+      required:
+        - request_id
+        - qr_payload
+      properties:
+        request_id:
+          type: string
+          format: uuid
+        qr_payload:
+          type: string
+          description: Base64-encoded signed QR payload from the student's app.
+
+    # ── Responses ──
+    AcceptRequestResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        assignment_id:
+          type: string
+          format: uuid
+        message:
+          type: string
+
+    ReportLockedResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        proof_image_url:
+          type: string
+          format: uri
+
+    CreateRequestResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        request_id:
+          type: string
+          format: uuid
+        message:
+          type: string
+
+    VerifyQRResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        code:
+          type: string
+          description: Machine-readable error code.
+        message:
+          type: string
+          description: Human-readable error message.
