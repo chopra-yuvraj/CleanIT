@@ -1,8 +1,9 @@
 /// CleanIT — Main Entry Point
 ///
-/// Initializes Firebase, Supabase, and FCM.
+/// Initializes Firebase (mobile only), Supabase, and FCM.
 /// Routes to auth screen or the appropriate role-based dashboard.
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -26,45 +27,46 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ── Initialize Firebase ──
-  await Firebase.initializeApp();
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  // ── Initialize Firebase (mobile only — web has no firebase_options configured) ──
+  if (!kIsWeb) {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // ── Initialize Supabase ──
+    // Request notification permissions
+    final messaging = FirebaseMessaging.instance;
+    await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      criticalAlert: true,
+    );
+
+    // Get and store FCM token
+    final fcmToken = await messaging.getToken();
+    debugPrint('FCM Token: $fcmToken');
+
+    if (fcmToken != null) {
+      try {
+        final auth = AuthService.instance;
+        if (auth.isSignedIn) {
+          await auth.updateFcmToken(fcmToken);
+        }
+      } catch (_) {}
+    }
+
+    // Listen for token refresh
+    messaging.onTokenRefresh.listen((newToken) async {
+      try {
+        await AuthService.instance.updateFcmToken(newToken);
+      } catch (_) {}
+    });
+  }
+
+  // ── Initialize Supabase (works on all platforms) ──
   await Supabase.initialize(
     url: AppConfig.supabaseUrl,
     anonKey: AppConfig.supabaseAnonKey,
   );
-
-  // ── Request notification permissions ──
-  final messaging = FirebaseMessaging.instance;
-  await messaging.requestPermission(
-    alert: true,
-    badge: true,
-    sound: true,
-    criticalAlert: true, // For urgent siren sound
-  );
-
-  // ── Get and store FCM token ──
-  final fcmToken = await messaging.getToken();
-  debugPrint('FCM Token: $fcmToken');
-
-  // Save token to user profile if already logged in
-  if (fcmToken != null) {
-    try {
-      final auth = AuthService.instance;
-      if (auth.isSignedIn) {
-        await auth.updateFcmToken(fcmToken);
-      }
-    } catch (_) {}
-  }
-
-  // ── Listen for token refresh ──
-  messaging.onTokenRefresh.listen((newToken) async {
-    try {
-      await AuthService.instance.updateFcmToken(newToken);
-    } catch (_) {}
-  });
 
   runApp(const CleanITApp());
 }
@@ -108,9 +110,11 @@ class _AuthGateState extends State<_AuthGate> {
       if (auth.isSignedIn) {
         final profile = await auth.fetchProfile();
 
-        // Save FCM token
-        final token = await FirebaseMessaging.instance.getToken();
-        if (token != null) await auth.updateFcmToken(token);
+        // Save FCM token (mobile only)
+        if (!kIsWeb) {
+          final token = await FirebaseMessaging.instance.getToken();
+          if (token != null) await auth.updateFcmToken(token);
+        }
 
         _destination = profile.role == UserRole.student
             ? const StudentHomeScreen()
