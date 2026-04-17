@@ -21,7 +21,7 @@ class AuthService {
   AppUser? get currentProfile => _cachedProfile;
 
   /// Sign up with email & password, then create a user profile
-  Future<AppUser> signUp({
+  Future<AppUser?> signUp({
     required String email,
     required String password,
     required String name,
@@ -29,35 +29,30 @@ class AuthService {
     String? block,
     String? roomNumber,
   }) async {
-    // 1. Create auth account
+    // 1. Create auth account with user metadata
     final authResponse = await _supabase.auth.signUp(
       email: email,
       password: password,
+      data: {
+        'name': name,
+        'role': role.name,
+        'block': block,
+        'room_number': roomNumber,
+      },
     );
 
     if (authResponse.user == null) {
       throw Exception('Sign up failed. Please try again.');
     }
 
-    // 2. Create user profile in our users table
-    final profileData = {
-      'auth_id': authResponse.user!.id,
-      'email': email,
-      'name': name,
-      'role': role.name,
-      'block': block,
-      'room_number': roomNumber,
-      'is_on_duty': role == UserRole.cleaner,
-    };
+    // 2. Handle email confirmations
+    // If session is null, Supabase requires email verification before login
+    if (authResponse.session == null) {
+      return null;
+    }
 
-    final response = await _supabase
-        .from('users')
-        .insert(profileData)
-        .select()
-        .single();
-
-    _cachedProfile = AppUser.fromJson(response);
-    return _cachedProfile!;
+    // 3. User is auto-logged in, fetch the profile created by our SQL Trigger
+    return await fetchProfile();
   }
 
   /// Sign in with email & password

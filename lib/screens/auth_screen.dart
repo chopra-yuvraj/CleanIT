@@ -79,8 +79,11 @@ class _AuthScreenState extends State<AuthScreen>
           email: _emailController.text.trim(),
           password: _passwordController.text,
         );
+      AppUser? profile;
+      if (_isLogin) {
+        profile = auth.currentProfile ?? await auth.fetchProfile();
       } else {
-        await auth.signUp(
+        profile = await auth.signUp(
           email: _emailController.text.trim(),
           password: _passwordController.text,
           name: _nameController.text.trim(),
@@ -94,14 +97,24 @@ class _AuthScreenState extends State<AuthScreen>
         );
       }
 
-      // Fetch profile to determine navigation
-      final profile = auth.currentProfile ?? await auth.fetchProfile();
-
       if (!mounted) return;
+
+      if (profile == null) {
+        // Sign up was successful but email needs confirmation
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account created! Please check your email to verify.'),
+            backgroundColor: AppTheme.green,
+            duration: Duration(seconds: 6),
+          ),
+        );
+        _toggleMode(); // Switch back to login page
+        return;
+      }
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => profile.role == UserRole.student
+          builder: (_) => profile!.role == UserRole.student
               ? const StudentHomeScreen()
               : const CleanerDashboardScreen(),
         ),

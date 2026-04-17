@@ -317,9 +317,10 @@ ALTER TABLE requests    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE assignments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE feedback    ENABLE ROW LEVEL SECURITY;
 
--- Users — everyone can read, only self can update
+-- Users — everyone can read, only self can update, and users can insert their own profile
 CREATE POLICY "users_select_all"  ON users FOR SELECT USING (TRUE);
 CREATE POLICY "users_update_self" ON users FOR UPDATE USING (auth.uid()::text = auth_id::text);
+CREATE POLICY "users_insert"      ON users FOR INSERT WITH CHECK (auth.uid()::text = auth_id::text);
 
 -- Requests — students see own, cleaners/admins see all
 CREATE POLICY "requests_select" ON requests FOR SELECT USING (
@@ -353,3 +354,38 @@ CREATE POLICY "feedback_select" ON feedback FOR SELECT USING (TRUE);
 -- ────────────────────────────────────────────────────────────
 ALTER PUBLICATION supabase_realtime ADD TABLE requests;
 ALTER PUBLICATION supabase_realtime ADD TABLE assignments;
+
+-- ────────────────────────────────────────────────────────────
+--  9. Auth Trigger (Secure User Creation)
+--     Automatically provisions the public.users profile when an
+--     account is created inside Supabase Auth, bypassing frontend RLS.
+-- ────────────────────────────────────────────────────────────
+
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.users (
+    auth_id,
+    email,
+    name,
+    role,
+    block,
+    room_number,
+    is_on_duty
+  ) VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'name', 'Student User'),
+    COALESCE((NEW.raw_user_meta_data->>'role')::public.user_role, 'student'::public.user_role),
+    NEW.raw_user_meta_data->>'block',
+    NEW.raw_user_meta_data->>'room_number',
+    COALESCE(NEW.raw_user_meta_data->>'role' = 'cleaner', FALSE)
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
