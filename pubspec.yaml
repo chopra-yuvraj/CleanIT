@@ -4,7 +4,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.3.0 <4.0.0'
+  sdk: '>=3.6.0 <4.0.0'
 
 dependencies:
   flutter:
@@ -16,12 +16,12 @@ dependencies:
   supabase_flutter: ^2.3.0
 
   # ── Firebase / FCM ──
-  firebase_core: ^2.27.0
-  firebase_messaging: ^14.7.0
+  firebase_core: ^4.7.0
+  firebase_messaging: ^16.2.0
 
   # ── QR Code ──
   qr_flutter: ^4.1.0
-  mobile_scanner: ^4.0.0
+  mobile_scanner: ^7.2.0
 
   # ── Camera & Image ──
   image_picker: ^1.0.7
@@ -40,7 +40,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: ^5.0.0
 
 flutter:
   uses-material-design: true

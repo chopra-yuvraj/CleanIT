@@ -43,7 +43,7 @@ flutter {
 }
 
 dependencies {
-    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
-    implementation("com.google.firebase:firebase-messaging")
+    // Firebase native deps are managed automatically by flutter firebase_core plugin.
+    // Do NOT add firebase-bom manually — it will conflict with plugin versions.
 }
 
