@@ -2,3 +2,4 @@
 export 'auth_service.dart';
 export 'request_service.dart';
 export 'qr_service.dart';
+export 'sound_service.dart';

@@ -33,6 +33,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
   int _qrRemainingSeconds = 0;
   bool _showFeedback = false;
   int _rating = 0;
+  final _commentController = TextEditingController();
 
   RealtimeChannel? _channel;
 
@@ -53,6 +54,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
     _qrTimer?.cancel();
     _pollTimer?.cancel();
     _channel?.unsubscribe();
+    _commentController.dispose();
     super.dispose();
   }
 
@@ -147,12 +149,17 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
         requestId: _request.id,
         studentId: profile!.id,
         rating: _rating,
+        comment: _commentController.text.trim().isNotEmpty
+            ? _commentController.text.trim()
+            : null,
       );
 
       if (!mounted) return;
+      SoundService.instance.play(AppSound.jobCompleted);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Thank you for your feedback! ⭐'),
+          content: const Text('Thank you for your feedback! ⭐',
+              style: TextStyle(color: Color(0xFF1E1E2E), fontWeight: FontWeight.w600)),
           backgroundColor: AppTheme.green,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -160,8 +167,15 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
       );
       Navigator.pop(context);
     } catch (e) {
+      SoundService.instance.play(AppSound.error);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.red),
+        SnackBar(
+          content: const Text('Could not submit feedback. Please try again.',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+          backgroundColor: AppTheme.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
     }
   }
@@ -583,7 +597,42 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                     );
                   }),
                 ),
-                const SizedBox(height: 36),
+                const SizedBox(height: 24),
+
+                // Comments field
+                TextField(
+                  controller: _commentController,
+                  maxLines: 3,
+                  maxLength: 300,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 15,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Add a comment (optional)...',
+                    hintStyle: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? AppTheme.overlay0
+                          : AppTheme.lOverlay0,
+                    ),
+                    counterStyle: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? AppTheme.overlay0
+                          : AppTheme.lOverlay0,
+                    ),
+                    prefixIcon: Padding(
+                      padding: const EdgeInsets.only(left: 14, right: 8, bottom: 40),
+                      child: Icon(
+                        Icons.comment_outlined,
+                        size: 20,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? AppTheme.overlay0
+                            : AppTheme.lOverlay0,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
 
                 SizedBox(
                   width: double.infinity,

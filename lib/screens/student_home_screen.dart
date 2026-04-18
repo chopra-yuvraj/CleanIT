@@ -10,6 +10,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/app_theme.dart';
+import '../config/theme_notifier.dart';
 import '../models/models.dart';
 import '../services/services.dart';
 import 'new_request_screen.dart';
@@ -145,6 +146,21 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: Icon(
+              themeNotifier.value == ThemeMode.dark
+                  ? Icons.light_mode_rounded
+                  : Icons.dark_mode_rounded,
+              color: AppTheme.overlay0,
+            ),
+            tooltip: 'Toggle theme',
+            onPressed: () {
+              themeNotifier.value =
+                  themeNotifier.value == ThemeMode.dark
+                      ? ThemeMode.light
+                      : ThemeMode.dark;
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: AppTheme.text),
             onPressed: _loadData,

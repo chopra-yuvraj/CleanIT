@@ -17,6 +17,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/qr_service.dart';
+import '../services/sound_service.dart';
 
 /// Data model representing an active cleaning job
 class CleaningJob {
@@ -85,6 +86,9 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
 
     _subscribeToRealtimeUpdates();
 
+    // ── Fetch full job data (student info) from DB ──
+    _fetchFullJobData();
+
     // ── Auto-poll every 5 seconds for seamless status sync ──
     _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted) _pollRefresh();
@@ -99,30 +103,91 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
     super.dispose();
   }
 
-  /// Silent poll: re-fetch the request status from the database.
+  /// Fetch full request data including student info from the database.
+  /// This resolves "Room N/A" when the job was created from a realtime
+  /// event that doesn't include joined student data.
+  Future<void> _fetchFullJobData() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final row = await supabase
+          .from('requests')
+          .select('''
+            status,
+            student:users!requests_student_id_fkey ( name, block, room_number )
+          ''')
+          .eq('id', _job.requestId)
+          .single();
+
+      if (!mounted) return;
+
+      final student = row['student'] as Map<String, dynamic>?;
+      final block = student?['block'] as String?;
+      final room = student?['room_number'] as String?;
+      final name = student?['name'] as String?;
+      final status = row['status'] as String;
+
+      final roomLabel = (block != null && room != null)
+          ? '$block-$room'
+          : _job.roomLabel;
+
+      setState(() {
+        _job = CleaningJob(
+          requestId: _job.requestId,
+          assignmentId: _job.assignmentId,
+          roomLabel: roomLabel,
+          isSweeping: _job.isSweeping,
+          isMopping: _job.isMopping,
+          isUrgent: _job.isUrgent,
+          notes: _job.notes,
+          studentName: name ?? _job.studentName,
+          status: status,
+        );
+      });
+    } catch (e) {
+      debugPrint('Error fetching full job data: $e');
+    }
+  }
+
+  /// Silent poll: re-fetch the request status and student data from the database.
   Future<void> _pollRefresh() async {
     try {
       final supabase = Supabase.instance.client;
       final row = await supabase
           .from('requests')
-          .select('status')
+          .select('''
+            status,
+            student:users!requests_student_id_fkey ( name, block, room_number )
+          ''')
           .eq('id', _job.requestId)
           .maybeSingle();
 
       if (row == null || !mounted) return;
 
       final newStatus = row['status'] as String;
-      if (newStatus != _job.status) {
+      final student = row['student'] as Map<String, dynamic>?;
+      final block = student?['block'] as String?;
+      final room = student?['room_number'] as String?;
+      final name = student?['name'] as String?;
+
+      final roomLabel = (block != null && room != null)
+          ? '$block-$room'
+          : _job.roomLabel;
+
+      final needsUpdate = newStatus != _job.status ||
+          roomLabel != _job.roomLabel ||
+          (name != null && name != _job.studentName);
+
+      if (needsUpdate) {
         setState(() {
           _job = CleaningJob(
             requestId: _job.requestId,
             assignmentId: _job.assignmentId,
-            roomLabel: _job.roomLabel,
+            roomLabel: roomLabel,
             isSweeping: _job.isSweeping,
             isMopping: _job.isMopping,
             isUrgent: _job.isUrgent,
             notes: _job.notes,
-            studentName: _job.studentName,
+            studentName: name ?? _job.studentName,
             status: newStatus,
           );
         });
@@ -211,10 +276,12 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
           );
         });
       } else {
-        _showError(result['message'] ?? 'Failed to start job');
+        SoundService.instance.play(AppSound.error);
+        _showError(result['message'] ?? 'Could not start job. Please try again.');
       }
     } catch (e) {
-      _showError('Network error: $e');
+      SoundService.instance.play(AppSound.error);
+      _showError('Connection issue. Please check your internet and try again.');
     } finally {
       setState(() => _isStartingJob = false);
     }
@@ -239,6 +306,7 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
       );
 
       if (!isValid) {
+        SoundService.instance.play(AppSound.error);
         _showError('Invalid or expired QR code. Ask the student to generate a new one.');
         return;
       }
@@ -257,12 +325,15 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
       });
 
       if (result['success'] == true) {
+        SoundService.instance.play(AppSound.qrSuccess);
         _showSuccessDialog();
       } else {
-        _showError(result['message'] ?? 'Verification failed');
+        SoundService.instance.play(AppSound.error);
+        _showError(result['message'] ?? 'Verification failed. Please try again.');
       }
     } catch (e) {
-      _showError('Error: $e');
+      SoundService.instance.play(AppSound.error);
+      _showError('Connection issue. Please check your internet and try again.');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -365,21 +436,22 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Report submitted. Student notified.'),
+              content: const Text('Report submitted. Student notified.',
+                  style: TextStyle(color: Color(0xFF1E1E2E), fontWeight: FontWeight.w600)),
               backgroundColor: const Color(0xFFFAB387),
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           );
-          Navigator.of(context).pop(); // Return to dashboard
+          Navigator.of(context).pop();
         }
       } else {
         // Clean up uploaded photo on failure
         await supabase.storage.from('proof-photos').remove([filePath]);
-        _showError(result['message'] ?? 'Failed to submit report');
+        _showError(result['message'] ?? 'Could not submit report. Please try again.');
       }
     } catch (e) {
-      _showError('Error: $e');
+      _showError('Connection issue. Please check your internet and try again.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -387,9 +459,11 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
 
   void _showError(String message) {
     if (!mounted) return;
+    SoundService.instance.play(AppSound.error);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(message,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
         backgroundColor: const Color(0xFFFF6B6B),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

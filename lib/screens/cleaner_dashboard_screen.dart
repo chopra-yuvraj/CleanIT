@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/app_theme.dart';
+import '../config/theme_notifier.dart';
 import '../models/models.dart';
 import '../services/services.dart';
 import 'cleaner_job_details.dart';
@@ -78,16 +79,30 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
   }
 
   /// Silent poll refresh — no loading spinner, just updates data.
+  /// Also detects new requests and shows the broadcast popup.
   Future<void> _pollRefresh() async {
     try {
       if (_profile == null) return;
       final openRequests = await _requestService.fetchOpenRequests();
       final myJobs = await _requestService.fetchCleanerJobs(_profile!.id);
-      if (mounted) {
-        setState(() {
-          _openRequests = openRequests;
-          _myJobs = myJobs;
-        });
+
+      if (!mounted) return;
+
+      // Detect genuinely new requests (IDs we haven't seen before)
+      final oldIds = _openRequests.map((r) => r.id).toSet();
+      final newRequests = openRequests
+          .where((r) => !oldIds.contains(r.id))
+          .toList();
+
+      setState(() {
+        _openRequests = openRequests;
+        _myJobs = myJobs;
+      });
+
+      // Show broadcast popup for the first new request
+      if (newRequests.isNotEmpty && _isOnDuty) {
+        SoundService.instance.play(AppSound.requestReceived);
+        _showBroadcastPopup(newRequests.first);
       }
     } catch (e) {
       debugPrint('Poll refresh error: $e');
@@ -98,13 +113,9 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
     _broadcastChannel = _requestService.subscribeToNewRequests((request) {
       if (!mounted || !_isOnDuty) return;
 
-      // Add to open requests list
-      setState(() {
-        _openRequests.insert(0, request);
-      });
-
-      // Show the broadcast pop-up modal
-      _showBroadcastPopup(request);
+      // Trigger an immediate poll refresh to get full data with student info.
+      // Realtime events only contain raw table columns without joined data.
+      _pollRefresh();
     });
   }
 
@@ -126,32 +137,49 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
       if (!mounted) return;
 
       if (result['success'] == true) {
-        // Remove from open list, add to my jobs
         setState(() {
           _openRequests.removeWhere((r) => r.id == request.id);
         });
-        await _loadData(); // Refresh to get updated lists
+        await _loadData();
 
-        // Navigate to job details
         if (!mounted) return;
         _navigateToJobDetails(request);
       } else {
+        SoundService.instance.play(AppSound.error);
+        final code = result['code'] as String?;
+        String message;
+        switch (code) {
+          case 'ALREADY_ASSIGNED':
+            message = 'This request was already picked up by another cleaner.';
+            break;
+          case 'REQUEST_NOT_FOUND':
+            message = 'This request is no longer available.';
+            break;
+          default:
+            message = result['message'] ?? 'Could not accept this request. Please try another.';
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'Request already taken.'),
+            content: Text(message,
+                style: const TextStyle(color: Color(0xFF1E1E2E), fontWeight: FontWeight.w600)),
             backgroundColor: AppTheme.peach,
             behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
-        // Refresh to remove the taken request
         _loadData();
       }
     } catch (e) {
       if (!mounted) return;
+      SoundService.instance.play(AppSound.error);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.red),
+        SnackBar(
+          content: const Text('Connection error. Please check your internet and try again.',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+          backgroundColor: AppTheme.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
     } finally {
       if (mounted) setState(() => _acceptingRequestId = null);
@@ -360,6 +388,21 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
           ],
         ),
         actions: [
+          IconButton(
+            icon: Icon(
+              themeNotifier.value == ThemeMode.dark
+                  ? Icons.light_mode_rounded
+                  : Icons.dark_mode_rounded,
+              color: AppTheme.overlay0,
+            ),
+            tooltip: 'Toggle theme',
+            onPressed: () {
+              themeNotifier.value =
+                  themeNotifier.value == ThemeMode.dark
+                      ? ThemeMode.light
+                      : ThemeMode.dark;
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: AppTheme.text),
             onPressed: _loadData,

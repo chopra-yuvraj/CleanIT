@@ -11,6 +11,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'config/app_config.dart';
 import 'config/app_theme.dart';
+import 'config/theme_notifier.dart';
 import 'models/models.dart';
 import 'services/services.dart';
 import 'screens/auth_screen.dart';
@@ -100,11 +101,18 @@ class CleanITApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'CleanIT',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
-      home: const _AuthGate(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeNotifier,
+      builder: (context, mode, _) {
+        return MaterialApp(
+          title: 'CleanIT',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: mode,
+          home: const _AuthGate(),
+        );
+      },
     );
   }
 }

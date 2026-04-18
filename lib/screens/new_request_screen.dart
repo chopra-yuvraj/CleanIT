@@ -35,10 +35,14 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
 
   Future<void> _submit() async {
     if (!_isSweeping && !_isMopping) {
+      SoundService.instance.play(AppSound.error);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select at least one task.'),
+        SnackBar(
+          content: const Text('Please select at least one task.',
+              style: TextStyle(color: Color(0xFF1E1E2E), fontWeight: FontWeight.w600)),
           backgroundColor: AppTheme.peach,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
       return;
@@ -59,30 +63,48 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
       if (!mounted) return;
 
       if (result['success'] == true) {
+        SoundService.instance.play(AppSound.requestCreated);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Request broadcast to cleaners! 🧹'),
+            content: const Text('Request broadcast to cleaners! 🧹',
+                style: TextStyle(color: Color(0xFF1E1E2E), fontWeight: FontWeight.w600)),
             backgroundColor: AppTheme.green,
             behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
-        Navigator.pop(context, true); // Return true to refresh parent
+        Navigator.pop(context, true);
       } else {
+        SoundService.instance.play(AppSound.error);
+        final code = result['code'] as String?;
+        String message;
+        switch (code) {
+          case 'ACTIVE_REQUEST_EXISTS':
+            message = 'You already have an active request. Please wait for it to complete.';
+            break;
+          default:
+            message = result['message'] ?? 'Something went wrong. Please try again.';
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'Failed to create request.'),
+            content: Text(message,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
             backgroundColor: AppTheme.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
     } catch (e) {
       if (!mounted) return;
+      SoundService.instance.play(AppSound.error);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $e'),
+          content: const Text('Could not create request. Check your connection and try again.',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
           backgroundColor: AppTheme.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
     } finally {
