@@ -17,8 +17,6 @@ build/
 !.env.example
 *.key
 *.pem
-google-services.json
-GoogleService-Info.plist
 
 # ── Firebase ──
 *-firebase-adminsdk-*.json

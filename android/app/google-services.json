@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "711134472336",
+    "project_id": "cleanit-b249a",
+    "storage_bucket": "cleanit-b249a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:711134472336:android:ca625e31bd8ef3a25fd015",
+        "android_client_info": {
+          "package_name": "com.cleanit.cleanit"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFI9V0KYybHaMWBsJjSSyrfHlKh1OQQP4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
