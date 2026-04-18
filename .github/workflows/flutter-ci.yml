@@ -27,11 +27,7 @@ jobs:
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Build web release
-        run: |
-          flutter build web --release \
-            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
-            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
-            --dart-define=QR_SIGNING_SECRET=${{ secrets.QR_SIGNING_SECRET }}
+        run: flutter build web --release
 
       - name: Upload web artifact
         uses: actions/upload-artifact@v4
