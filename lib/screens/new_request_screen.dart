@@ -355,10 +355,15 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
               ],
             ),
           ),
-          Switch.adaptive(
+          Switch(
             value: _isUrgent,
             onChanged: (v) => setState(() => _isUrgent = v),
-            activeThumbColor: AppTheme.red,
+            thumbColor: WidgetStateProperty.resolveWith<Color>((states) {
+              if (states.contains(WidgetState.selected)) {
+                return AppTheme.red;
+              }
+              return Colors.grey;
+            }),
             activeTrackColor: AppTheme.red.withValues(alpha: 0.3),
           ),
         ],

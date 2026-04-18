@@ -500,10 +500,15 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
               ],
             ),
           ),
-          Switch.adaptive(
+          Switch(
             value: _isOnDuty,
             onChanged: _toggleOnDuty,
-            activeThumbColor: AppTheme.green,
+            thumbColor: WidgetStateProperty.resolveWith<Color>((states) {
+              if (states.contains(WidgetState.selected)) {
+                return AppTheme.green;
+              }
+              return Colors.grey;
+            }),
             activeTrackColor: AppTheme.green.withValues(alpha: 0.3),
           ),
         ],
