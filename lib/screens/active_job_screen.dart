@@ -29,6 +29,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
   late CleaningRequest _request;
   String? _qrPayload;
   Timer? _qrTimer;
+  Timer? _pollTimer;
   int _qrRemainingSeconds = 0;
   bool _showFeedback = false;
   int _rating = 0;
@@ -40,13 +41,51 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
     super.initState();
     _request = widget.request;
     _subscribeToStatus();
+
+    // ── Auto-poll every 5 seconds for seamless status sync ──
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) _pollRefresh();
+    });
   }
 
   @override
   void dispose() {
     _qrTimer?.cancel();
+    _pollTimer?.cancel();
     _channel?.unsubscribe();
     super.dispose();
+  }
+
+  /// Silent poll: re-fetch the request status from the database.
+  Future<void> _pollRefresh() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final row = await supabase
+          .from('requests')
+          .select('status')
+          .eq('id', _request.id)
+          .maybeSingle();
+
+      if (row == null || !mounted) return;
+
+      final newStatusStr = row['status'] as String;
+      final newStatus = RequestStatus.fromString(newStatusStr);
+
+      if (newStatus != _request.status) {
+        setState(() {
+          _request = _request.copyWith(status: newStatus);
+        });
+
+        if (newStatus == RequestStatus.completed) {
+          setState(() => _showFeedback = true);
+        }
+        if (newStatus == RequestStatus.cancelledRoomLocked) {
+          _showLockedDialog();
+        }
+      }
+    } catch (e) {
+      debugPrint('Poll refresh error: $e');
+    }
   }
 
   void _subscribeToStatus() {

@@ -9,6 +9,8 @@
 //  - Real-time status updates via Supabase Realtime
 // ============================================================
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -62,6 +64,7 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
 
   // Supabase realtime subscription
   RealtimeChannel? _realtimeChannel;
+  Timer? _pollTimer;
 
   @override
   void initState() {
@@ -81,13 +84,56 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
     }
 
     _subscribeToRealtimeUpdates();
+
+    // ── Auto-poll every 5 seconds for seamless status sync ──
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) _pollRefresh();
+    });
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
     _realtimeChannel?.unsubscribe();
+    _pollTimer?.cancel();
     super.dispose();
+  }
+
+  /// Silent poll: re-fetch the request status from the database.
+  Future<void> _pollRefresh() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final row = await supabase
+          .from('requests')
+          .select('status')
+          .eq('id', _job.requestId)
+          .maybeSingle();
+
+      if (row == null || !mounted) return;
+
+      final newStatus = row['status'] as String;
+      if (newStatus != _job.status) {
+        setState(() {
+          _job = CleaningJob(
+            requestId: _job.requestId,
+            assignmentId: _job.assignmentId,
+            roomLabel: _job.roomLabel,
+            isSweeping: _job.isSweeping,
+            isMopping: _job.isMopping,
+            isUrgent: _job.isUrgent,
+            notes: _job.notes,
+            studentName: _job.studentName,
+            status: newStatus,
+          );
+        });
+
+        if (newStatus == 'COMPLETED') {
+          _showSuccessDialog();
+        }
+      }
+    } catch (e) {
+      debugPrint('Poll refresh error: $e');
+    }
   }
 
   /// Subscribe to real-time status changes on this request

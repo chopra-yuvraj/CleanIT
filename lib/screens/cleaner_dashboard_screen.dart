@@ -38,6 +38,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
 
   RealtimeChannel? _broadcastChannel;
   late AnimationController _radarController;
+  Timer? _pollTimer;
 
   @override
   void initState() {
@@ -48,12 +49,18 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
     )..repeat();
     _loadData();
     _subscribeToNewRequests();
+
+    // ── Auto-poll every 5 seconds for seamless data sync ──
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted && _isOnDuty) _pollRefresh();
+    });
   }
 
   @override
   void dispose() {
     _radarController.dispose();
     _broadcastChannel?.unsubscribe();
+    _pollTimer?.cancel();
     super.dispose();
   }
 
@@ -68,6 +75,23 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
       debugPrint('Error loading cleaner data: $e');
     }
     if (mounted) setState(() => _isLoading = false);
+  }
+
+  /// Silent poll refresh — no loading spinner, just updates data.
+  Future<void> _pollRefresh() async {
+    try {
+      if (_profile == null) return;
+      final openRequests = await _requestService.fetchOpenRequests();
+      final myJobs = await _requestService.fetchCleanerJobs(_profile!.id);
+      if (mounted) {
+        setState(() {
+          _openRequests = openRequests;
+          _myJobs = myJobs;
+        });
+      }
+    } catch (e) {
+      debugPrint('Poll refresh error: $e');
+    }
   }
 
   void _subscribeToNewRequests() {

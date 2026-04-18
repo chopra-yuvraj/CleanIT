@@ -6,6 +6,7 @@
 // - Active job card (if a request is in progress)
 // - Recent request history
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/app_theme.dart';
@@ -30,11 +31,23 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   CleaningRequest? _activeRequest;
   List<CleaningRequest> _history = [];
   bool _isLoading = true;
+  Timer? _pollTimer;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+
+    // ── Auto-poll every 5 seconds for seamless status updates ──
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) _pollRefresh();
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -48,6 +61,24 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       debugPrint('Error loading data: $e');
     }
     if (mounted) setState(() => _isLoading = false);
+  }
+
+  /// Silent poll refresh — no loading spinner, just updates data.
+  Future<void> _pollRefresh() async {
+    try {
+      if (_profile == null) return;
+      final activeRequest =
+          await _requestService.fetchActiveStudentRequest(_profile!.id);
+      final history = await _requestService.fetchStudentRequests(_profile!.id);
+      if (mounted) {
+        setState(() {
+          _activeRequest = activeRequest;
+          _history = history;
+        });
+      }
+    } catch (e) {
+      debugPrint('Poll refresh error: $e');
+    }
   }
 
   CleaningRequest? get _lastCancelledRequest {
