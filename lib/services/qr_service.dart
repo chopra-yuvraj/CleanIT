@@ -46,7 +46,6 @@ class QRService {
   }
 
   /// Check if a QR payload has expired (client-side pre-check).
-  /// The real validation happens server-side in the verify-qr Edge Function.
   bool isExpired(String base64Payload) {
     try {
       final decoded = utf8.decode(base64Decode(base64Payload));
@@ -56,6 +55,41 @@ class QRService {
       return age > AppConfig.qrExpiry.inMilliseconds;
     } catch (_) {
       return true;
+    }
+  }
+
+  /// Full client-side validation of a QR payload.
+  /// Verifies HMAC signature, checks expiry, and confirms request_id matches.
+  bool validatePayload(String base64Payload, String expectedRequestId) {
+    try {
+      final decoded = utf8.decode(base64Decode(base64Payload));
+      final data = jsonDecode(decoded) as Map<String, dynamic>;
+
+      final requestId = data['request_id'] as String?;
+      final studentId = data['student_id'] as String?;
+      final timestamp = data['timestamp'] as int?;
+      final signature = data['signature'] as String?;
+
+      if (requestId == null || studentId == null || timestamp == null || signature == null) {
+        return false;
+      }
+
+      // 1. Check request_id matches
+      if (requestId != expectedRequestId) return false;
+
+      // 2. Check expiry
+      final age = DateTime.now().millisecondsSinceEpoch - timestamp;
+      if (age > AppConfig.qrExpiry.inMilliseconds || age < 0) return false;
+
+      // 3. Verify HMAC signature
+      final message = '$requestId:$studentId:$timestamp';
+      final key = utf8.encode(AppConfig.qrSigningSecret);
+      final hmacSha256 = Hmac(sha256, key);
+      final expectedSignature = hmacSha256.convert(utf8.encode(message)).toString();
+
+      return signature == expectedSignature;
+    } catch (_) {
+      return false;
     }
   }
 

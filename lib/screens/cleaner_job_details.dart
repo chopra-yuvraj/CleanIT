@@ -9,13 +9,12 @@
 //  - Real-time status updates via Supabase Realtime
 // ============================================================
 
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:http/http.dart' as http;
+
+import '../services/qr_service.dart';
 
 /// Data model representing an active cleaning job
 class CleaningJob {
@@ -187,32 +186,37 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
     });
 
     try {
-      final supabase = Supabase.instance.client;
-      final session = supabase.auth.currentSession;
-
-      final response = await http.post(
-        Uri.parse('${supabase.rest.url.replaceAll('/rest/v1', '/functions/v1')}/verify-qr'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${session?.accessToken}',
-        },
-        body: jsonEncode({
-          'request_id': _job.requestId,
-          'qr_payload': qrPayload,
-        }),
+      // 1. Validate QR payload client-side (signature + expiry)
+      final isValid = QRService.instance.validatePayload(
+        qrPayload,
+        _job.requestId,
       );
 
-      final body = jsonDecode(response.body);
+      if (!isValid) {
+        _showError('Invalid or expired QR code. Ask the student to generate a new one.');
+        return;
+      }
 
-      if (response.statusCode == 200 && body['success'] == true) {
+      // 2. Complete the job via direct RPC call
+      final supabase = Supabase.instance.client;
+      final userRow = await supabase
+          .from('users')
+          .select('id')
+          .eq('auth_id', supabase.auth.currentUser!.id)
+          .single();
+
+      final result = await supabase.rpc('complete_job', params: {
+        'p_request_id': _job.requestId,
+        'p_cleaner_id': userRow['id'],
+      });
+
+      if (result['success'] == true) {
         _showSuccessDialog();
-      } else if (response.statusCode == 410) {
-        _showError('QR code expired. Ask the student to generate a new one.');
       } else {
-        _showError(body['message'] ?? 'Verification failed');
+        _showError(result['message'] ?? 'Verification failed');
       }
     } catch (e) {
-      _showError('Network error: $e');
+      _showError('Error: $e');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -276,27 +280,42 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
 
     try {
       final supabase = Supabase.instance.client;
-      final session = supabase.auth.currentSession;
-      final functionsUrl =
-          supabase.rest.url.replaceAll('/rest/v1', '/functions/v1');
 
-      // Build multipart request
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse('$functionsUrl/report-locked'),
+      // 1. Look up internal user ID
+      final userRow = await supabase
+          .from('users')
+          .select('id')
+          .eq('auth_id', supabase.auth.currentUser!.id)
+          .single();
+
+      // 2. Upload proof photo to Supabase Storage
+      final fileName = '${_job.requestId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final filePath = 'locked-proofs/$fileName';
+      final photoBytes = await photo.readAsBytes();
+
+      await supabase.storage
+          .from('proof-photos')
+          .uploadBinary(filePath, photoBytes, fileOptions: const FileOptions(
+            contentType: 'image/jpeg',
+            upsert: false,
+          ));
+
+      final publicUrl = supabase.storage
+          .from('proof-photos')
+          .getPublicUrl(filePath);
+
+      // 3. Call the RPC function to cancel the request
+      final result = await supabase.rpc(
+        'report_room_locked',
+        params: {
+          'p_request_id': _job.requestId,
+          'p_cleaner_id': userRow['id'],
+          'p_failure_reason': 'room_locked',
+          'p_proof_url': publicUrl,
+        },
       );
-      request.headers['Authorization'] = 'Bearer ${session?.accessToken}';
-      request.fields['request_id'] = _job.requestId;
-      request.fields['failure_reason'] = 'room_locked';
-      request.files.add(
-        await http.MultipartFile.fromPath('photo', photo.path),
-      );
 
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-      final body = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && body['success'] == true) {
+      if (result['success'] == true) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -309,10 +328,12 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
           Navigator.of(context).pop(); // Return to dashboard
         }
       } else {
-        _showError(body['message'] ?? 'Failed to submit report');
+        // Clean up uploaded photo on failure
+        await supabase.storage.from('proof-photos').remove([filePath]);
+        _showError(result['message'] ?? 'Failed to submit report');
       }
     } catch (e) {
-      _showError('Network error: $e');
+      _showError('Error: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

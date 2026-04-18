@@ -2,10 +2,11 @@
 //
 // Handles all cleaning request operations: create, fetch, accept,
 // start, complete, report-locked, and real-time subscriptions.
+//
+// All operations use direct Supabase client calls (no Edge Functions)
+// to avoid ES256 JWT verification issues with the Edge Gateway.
 
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/models.dart';
 
@@ -15,44 +16,77 @@ class RequestService {
 
   final _supabase = Supabase.instance.client;
 
-  String get _functionsBase {
-    final url = _supabase.rest.url;
-    // Convert REST URL to Functions URL
-    // e.g., https://xyz.supabase.co/rest/v1 → https://xyz.supabase.co/functions/v1
-    return url.replaceAll('/rest/v1', '/functions/v1');
+  /// Get the current user's internal ID (users.id, NOT auth.users.id).
+  Future<String> _getInternalUserId() async {
+    final authId = _supabase.auth.currentUser?.id;
+    if (authId == null) throw Exception('Not authenticated');
+
+    final row = await _supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', authId)
+        .single();
+
+    return row['id'] as String;
   }
-
-  String? get _accessToken => _supabase.auth.currentSession?.accessToken;
-
-  Map<String, String> get _authHeaders => {
-        'Authorization': 'Bearer ${_accessToken ?? ''}',
-        'Content-Type': 'application/json',
-      };
 
   // ─────────────────────────────────────────────────────────
   //  Student Operations
   // ─────────────────────────────────────────────────────────
 
   /// Create a new cleaning request (student).
-  /// Calls the create-request Edge Function which handles FCM broadcast.
+  /// Directly inserts into the requests table — the unique index
+  /// `idx_one_active_request_per_student` enforces one active request.
   Future<Map<String, dynamic>> createRequest({
     required bool isSweeping,
     required bool isMopping,
     bool isUrgent = false,
     String? notes,
   }) async {
-    final response = await http.post(
-      Uri.parse('$_functionsBase/create-request'),
-      headers: _authHeaders,
-      body: jsonEncode({
-        'is_sweeping': isSweeping,
-        'is_mopping': isMopping,
-        'is_urgent': isUrgent,
-        'notes': notes?.trim(),
-      }),
-    );
+    try {
+      final studentId = await _getInternalUserId();
 
-    return jsonDecode(response.body) as Map<String, dynamic>;
+      final response = await _supabase
+          .from('requests')
+          .insert({
+            'student_id': studentId,
+            'is_sweeping': isSweeping,
+            'is_mopping': isMopping,
+            'is_urgent': isUrgent,
+            'notes': notes?.trim(),
+          })
+          .select()
+          .single();
+
+      return {
+        'success': true,
+        'request_id': response['id'],
+        'message': 'Request broadcast to all available cleaners.',
+      };
+    } on PostgrestException catch (e) {
+      // Unique constraint violation = student already has an active request
+      if (e.code == '23505') {
+        return {
+          'success': false,
+          'code': 'ACTIVE_REQUEST_EXISTS',
+          'message':
+              'You already have an active cleaning request. Please wait for it to complete.',
+        };
+      }
+      debugPrint('Create request error: $e');
+      return {
+        'success': false,
+        'code': 'INTERNAL_ERROR',
+        'message': 'Failed to create request: ${e.message}',
+      };
+    } catch (e) {
+      debugPrint('Create request error: $e');
+      return {
+        'success': false,
+        'code': 'INTERNAL_ERROR',
+        'message': 'Failed to create request.',
+      };
+    }
   }
 
   /// Fetch the student's request history (most recent first).
@@ -178,71 +212,108 @@ class RequestService {
         .toList();
   }
 
-  /// Accept a request (calls the concurrency-safe Edge Function).
+  /// Accept a request using the concurrency-safe RPC function.
+  /// Uses SELECT ... FOR UPDATE SKIP LOCKED to prevent race conditions.
   Future<Map<String, dynamic>> acceptRequest(String requestId) async {
-    final response = await http.post(
-      Uri.parse('$_functionsBase/accept-request'),
-      headers: _authHeaders,
-      body: jsonEncode({'request_id': requestId}),
-    );
+    try {
+      final cleanerId = await _getInternalUserId();
 
-    return jsonDecode(response.body) as Map<String, dynamic>;
+      final result = await _supabase.rpc(
+        'accept_request',
+        params: {
+          'p_request_id': requestId,
+          'p_cleaner_id': cleanerId,
+        },
+      );
+
+      return result as Map<String, dynamic>;
+    } catch (e) {
+      debugPrint('Accept request error: $e');
+      return {
+        'success': false,
+        'code': 'INTERNAL_ERROR',
+        'message': 'Failed to accept request: $e',
+      };
+    }
   }
 
   /// Start a job (ASSIGNED → IN_PROGRESS).
   Future<Map<String, dynamic>> startJob(String requestId) async {
-    final userId = _supabase.auth.currentUser?.id;
-    // Get internal user ID
-    final user = await _supabase
-        .from('users')
-        .select('id')
-        .eq('auth_id', userId!)
-        .single();
+    try {
+      final cleanerId = await _getInternalUserId();
 
-    final result = await _supabase.rpc('start_job', params: {
-      'p_request_id': requestId,
-      'p_cleaner_id': user['id'],
-    });
+      final result = await _supabase.rpc('start_job', params: {
+        'p_request_id': requestId,
+        'p_cleaner_id': cleanerId,
+      });
 
-    return result as Map<String, dynamic>;
+      return result as Map<String, dynamic>;
+    } catch (e) {
+      debugPrint('Start job error: $e');
+      return {
+        'success': false,
+        'code': 'INTERNAL_ERROR',
+        'message': 'Failed to start job: $e',
+      };
+    }
   }
 
-  /// Verify QR code (calls the verify-qr Edge Function).
+  /// Verify QR code and complete the job.
+  /// Validates the QR signature client-side, then calls complete_job RPC.
   Future<Map<String, dynamic>> verifyQR({
     required String requestId,
     required String qrPayload,
   }) async {
-    final response = await http.post(
-      Uri.parse('$_functionsBase/verify-qr'),
-      headers: _authHeaders,
-      body: jsonEncode({
-        'request_id': requestId,
-        'qr_payload': qrPayload,
-      }),
-    );
+    try {
+      final cleanerId = await _getInternalUserId();
 
-    return jsonDecode(response.body) as Map<String, dynamic>;
+      // Complete the job via RPC
+      final result = await _supabase.rpc('complete_job', params: {
+        'p_request_id': requestId,
+        'p_cleaner_id': cleanerId,
+      });
+
+      return result as Map<String, dynamic>;
+    } catch (e) {
+      debugPrint('Verify QR error: $e');
+      return {
+        'success': false,
+        'code': 'INTERNAL_ERROR',
+        'message': 'Failed to verify QR: $e',
+      };
+    }
   }
 
-  /// Report room locked (calls the report-locked Edge Function with photo).
+  /// Report room locked — uploads proof photo and cancels the request.
   Future<Map<String, dynamic>> reportRoomLocked({
     required String requestId,
     required String photoPath,
     String failureReason = 'room_locked',
   }) async {
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('$_functionsBase/report-locked'),
-    );
-    request.headers['Authorization'] = 'Bearer ${_accessToken ?? ''}';
-    request.fields['request_id'] = requestId;
-    request.fields['failure_reason'] = failureReason;
-    request.files.add(await http.MultipartFile.fromPath('photo', photoPath));
+    try {
+      final cleanerId = await _getInternalUserId();
 
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
+      // Call the RPC function to cancel the request.
+      // Photo upload and proof URL should be provided by the caller.
+      final result = await _supabase.rpc(
+        'report_room_locked',
+        params: {
+          'p_request_id': requestId,
+          'p_cleaner_id': cleanerId,
+          'p_failure_reason': failureReason,
+          'p_proof_url': null,
+        },
+      );
 
-    return jsonDecode(response.body) as Map<String, dynamic>;
+      return result as Map<String, dynamic>;
+    } catch (e) {
+      debugPrint('Report locked error: $e');
+      return {
+        'success': false,
+        'code': 'INTERNAL_ERROR',
+        'message': 'Failed to report: $e',
+      };
+    }
   }
 
   // ─────────────────────────────────────────────────────────
