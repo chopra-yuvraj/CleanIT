@@ -137,9 +137,18 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
 
     try {
       final supabase = Supabase.instance.client;
+
+      // Look up the internal user ID (users.id) from the auth UUID.
+      // The start_job() RPC expects users.id, NOT auth.users.id.
+      final userRow = await supabase
+          .from('users')
+          .select('id')
+          .eq('auth_id', supabase.auth.currentUser!.id)
+          .single();
+
       final result = await supabase.rpc('start_job', params: {
         'p_request_id': _job.requestId,
-        'p_cleaner_id': supabase.auth.currentUser!.id,
+        'p_cleaner_id': userRow['id'],
       });
 
       if (result['success'] == true) {

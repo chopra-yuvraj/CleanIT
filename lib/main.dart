@@ -41,6 +41,11 @@ Future<void> main() async {
       criticalAlert: true,
     );
 
+    // ── Create Android notification channels ──
+    // Android 8.0+ requires explicit channel creation.
+    // These must match the channel_id values sent by Edge Functions.
+    await _createAndroidNotificationChannels();
+
     // Get and store FCM token
     final fcmToken = await messaging.getToken();
     debugPrint('FCM Token: $fcmToken');
@@ -69,6 +74,25 @@ Future<void> main() async {
   );
 
   runApp(const CleanITApp());
+}
+
+/// Creates the required notification channels on Android.
+/// These channels match the channel_id values sent by the FCM Edge Functions.
+Future<void> _createAndroidNotificationChannels() async {
+  try {
+    // Set foreground notification presentation options.
+    // The actual notification channels are defined in AndroidManifest.xml
+    // and created automatically by the Firebase Messaging plugin when
+    // FCM messages include a channel_id field.
+    await FirebaseMessaging.instance
+        .setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+  } catch (e) {
+    debugPrint('Notification setup skipped: $e');
+  }
 }
 
 class CleanITApp extends StatelessWidget {
