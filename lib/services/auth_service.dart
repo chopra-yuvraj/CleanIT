@@ -1,26 +1,30 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+// CleanIT — Auth Service
+//
+// Handles authentication via JWT tokens against the Express/MongoDB API.
+
+import 'package:flutter/foundation.dart';
 import '../models/models.dart';
+import 'api_client.dart';
 
 class AuthService {
   AuthService._();
   static final AuthService instance = AuthService._();
 
-  final _supabase = Supabase.instance.client;
-
-  /// Current Supabase auth user
-  User? get currentAuthUser => _supabase.auth.currentUser;
-
-  /// Stream of auth state changes
-  Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
-
-  /// Whether a user is currently signed in
-  bool get isSignedIn => currentAuthUser != null;
+  final _api = ApiClient.instance;
 
   // Cached app user profile
   AppUser? _cachedProfile;
   AppUser? get currentProfile => _cachedProfile;
 
-  /// Sign up with email & password, then create a user profile
+  /// Whether a user is currently signed in (has a stored token)
+  Future<bool> checkSignedIn() async {
+    return await _api.hasToken();
+  }
+
+  /// Synchronous check using cached state (call checkSignedIn first)
+  bool get isSignedIn => _cachedProfile != null;
+
+  /// Sign up with email & password, then return user profile
   Future<AppUser?> signUp({
     required String email,
     required String password,
@@ -29,30 +33,25 @@ class AuthService {
     String? block,
     String? roomNumber,
   }) async {
-    // 1. Create auth account with user metadata
-    final authResponse = await _supabase.auth.signUp(
-      email: email,
-      password: password,
-      data: {
-        'name': name,
-        'role': role.name,
-        'block': block,
-        'room_number': roomNumber,
-      },
-    );
+    final response = await _api.post('/auth/register', body: {
+      'email': email,
+      'password': password,
+      'name': name,
+      'role': role.name,
+      'block': block,
+      'roomNumber': roomNumber,
+    });
 
-    if (authResponse.user == null) {
-      throw Exception('Sign up failed. Please try again.');
+    if (response['success'] == true) {
+      // Save JWT token
+      await _api.saveToken(response['token'] as String);
+
+      // Cache profile
+      _cachedProfile = AppUser.fromJson(response['user'] as Map<String, dynamic>);
+      return _cachedProfile;
     }
 
-    // 2. Handle email confirmations
-    // If session is null, Supabase requires email verification before login
-    if (authResponse.session == null) {
-      return null;
-    }
-
-    // 3. User is auto-logged in, fetch the profile created by our SQL Trigger
-    return await fetchProfile();
+    throw Exception(response['message'] ?? 'Sign up failed');
   }
 
   /// Sign in with email & password
@@ -60,64 +59,58 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    await _supabase.auth.signInWithPassword(
-      email: email,
-      password: password,
-    );
+    final response = await _api.post('/auth/login', body: {
+      'email': email,
+      'password': password,
+    });
 
-    return await fetchProfile();
+    if (response['success'] == true) {
+      // Save JWT token
+      await _api.saveToken(response['token'] as String);
+
+      // Cache profile
+      _cachedProfile = AppUser.fromJson(response['user'] as Map<String, dynamic>);
+      return _cachedProfile!;
+    }
+
+    throw Exception(response['message'] ?? 'Sign in failed');
   }
 
-  /// Fetch the current user's profile from the users table
+  /// Fetch the current user's profile from the API
   Future<AppUser> fetchProfile() async {
-    final authUser = currentAuthUser;
-    if (authUser == null) throw Exception('Not authenticated');
+    final response = await _api.get('/auth/profile');
 
-    final response = await _supabase
-        .from('users')
-        .select()
-        .eq('auth_id', authUser.id)
-        .single();
+    if (response['success'] == true) {
+      _cachedProfile = AppUser.fromJson(response['user'] as Map<String, dynamic>);
+      return _cachedProfile!;
+    }
 
-    _cachedProfile = AppUser.fromJson(response);
-    return _cachedProfile!;
+    throw Exception('Failed to fetch profile');
   }
 
   /// Update FCM token in the user profile
   Future<void> updateFcmToken(String token) async {
-    if (_cachedProfile == null) return;
-
-    await _supabase
-        .from('users')
-        .update({'fcm_token': token})
-        .eq('id', _cachedProfile!.id);
+    try {
+      await _api.put('/auth/fcm-token', body: {'fcmToken': token});
+    } catch (e) {
+      debugPrint('Failed to update FCM token: $e');
+    }
   }
 
   /// Toggle cleaner on-duty status
   Future<void> toggleOnDuty(bool isOnDuty) async {
-    if (_cachedProfile == null) return;
+    final response = await _api.put('/auth/toggle-duty', body: {
+      'isOnDuty': isOnDuty,
+    });
 
-    await _supabase
-        .from('users')
-        .update({'is_on_duty': isOnDuty})
-        .eq('id', _cachedProfile!.id);
-
-    _cachedProfile = AppUser(
-      id: _cachedProfile!.id,
-      authId: _cachedProfile!.authId,
-      email: _cachedProfile!.email,
-      name: _cachedProfile!.name,
-      role: _cachedProfile!.role,
-      block: _cachedProfile!.block,
-      roomNumber: _cachedProfile!.roomNumber,
-      fcmToken: _cachedProfile!.fcmToken,
-      isOnDuty: isOnDuty,
-    );
+    if (response['success'] == true && response['user'] != null) {
+      _cachedProfile = AppUser.fromJson(response['user'] as Map<String, dynamic>);
+    }
   }
 
   /// Sign out
   Future<void> signOut() async {
     _cachedProfile = null;
-    await _supabase.auth.signOut();
+    await _api.deleteToken();
   }
 }

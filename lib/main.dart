@@ -1,15 +1,13 @@
 // CleanIT — Main Entry Point
 //
-// Initializes Firebase (mobile only), Supabase, and FCM.
+// Initializes Firebase (mobile only) and the API client.
 // Routes to auth screen or the appropriate role-based dashboard.
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
-import 'config/app_config.dart';
 import 'config/app_theme.dart';
 import 'config/theme_notifier.dart';
 import 'models/models.dart';
@@ -17,6 +15,7 @@ import 'services/services.dart';
 import 'screens/auth_screen.dart';
 import 'screens/student_home_screen.dart';
 import 'screens/cleaner_dashboard_screen.dart';
+import 'screens/admin_dashboard_screen.dart';
 
 /// Top-level background FCM handler (must be outside any class)
 @pragma('vm:entry-point')
@@ -43,8 +42,6 @@ Future<void> main() async {
     );
 
     // ── Create Android notification channels ──
-    // Android 8.0+ requires explicit channel creation.
-    // These must match the channel_id values sent by Edge Functions.
     await _createAndroidNotificationChannels();
 
     // Get and store FCM token
@@ -54,7 +51,8 @@ Future<void> main() async {
     if (fcmToken != null) {
       try {
         final auth = AuthService.instance;
-        if (auth.isSignedIn) {
+        final isSignedIn = await auth.checkSignedIn();
+        if (isSignedIn) {
           await auth.updateFcmToken(fcmToken);
         }
       } catch (_) {}
@@ -68,23 +66,12 @@ Future<void> main() async {
     });
   }
 
-  // ── Initialize Supabase (works on all platforms) ──
-  await Supabase.initialize(
-    url: AppConfig.supabaseUrl,
-    anonKey: AppConfig.supabaseAnonKey,
-  );
-
   runApp(const CleanITApp());
 }
 
 /// Creates the required notification channels on Android.
-/// These channels match the channel_id values sent by the FCM Edge Functions.
 Future<void> _createAndroidNotificationChannels() async {
   try {
-    // Set foreground notification presentation options.
-    // The actual notification channels are defined in AndroidManifest.xml
-    // and created automatically by the Firebase Messaging plugin when
-    // FCM messages include a channel_id field.
     await FirebaseMessaging.instance
         .setForegroundNotificationPresentationOptions(
       alert: true,
@@ -138,8 +125,9 @@ class _AuthGateState extends State<_AuthGate> {
   Future<void> _checkAuth() async {
     try {
       final auth = AuthService.instance;
+      final isSignedIn = await auth.checkSignedIn();
 
-      if (auth.isSignedIn) {
+      if (isSignedIn) {
         final profile = await auth.fetchProfile();
 
         // Save FCM token (mobile only)
@@ -148,9 +136,13 @@ class _AuthGateState extends State<_AuthGate> {
           if (token != null) await auth.updateFcmToken(token);
         }
 
-        _destination = profile.role == UserRole.student
-            ? const StudentHomeScreen()
-            : const CleanerDashboardScreen();
+        if (profile.role == UserRole.admin) {
+          _destination = const AdminDashboardScreen();
+        } else if (profile.role == UserRole.student) {
+          _destination = const StudentHomeScreen();
+        } else {
+          _destination = const CleanerDashboardScreen();
+        }
       } else {
         _destination = const AuthScreen();
       }

@@ -10,7 +10,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../config/app_theme.dart';
 import '../config/theme_notifier.dart';
 import '../models/models.dart';
@@ -37,7 +37,6 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
   bool _isOnDuty = true;
   String? _acceptingRequestId; // Which request is currently being accepted
 
-  RealtimeChannel? _broadcastChannel;
   late AnimationController _radarController;
   Timer? _pollTimer;
 
@@ -49,7 +48,6 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
       duration: const Duration(seconds: 3),
     )..repeat();
     _loadData();
-    _subscribeToNewRequests();
 
     // ── Auto-poll every 5 seconds for seamless data sync ──
     _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
@@ -60,7 +58,6 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
   @override
   void dispose() {
     _radarController.dispose();
-    _broadcastChannel?.unsubscribe();
     _pollTimer?.cancel();
     super.dispose();
   }
@@ -109,15 +106,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
     }
   }
 
-  void _subscribeToNewRequests() {
-    _broadcastChannel = _requestService.subscribeToNewRequests((request) {
-      if (!mounted || !_isOnDuty) return;
 
-      // Trigger an immediate poll refresh to get full data with student info.
-      // Realtime events only contain raw table columns without joined data.
-      _pollRefresh();
-    });
-  }
 
   Future<void> _toggleOnDuty(bool value) async {
     setState(() => _isOnDuty = value);

@@ -14,9 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2.19.0
         with:
-          flutter-version: "3.29.0"
+          flutter-version: "3.29.3"
           channel: stable
           cache: true
 
@@ -34,7 +34,7 @@ jobs:
         with:
           name: web-build
           path: build/web/
-          retention-days: 7
+          retention-days: 14
 
       - name: Build Android APK
         run: flutter build apk --release
@@ -44,4 +44,4 @@ jobs:
         with:
           name: cleanit-android-apk
           path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 7
+          retention-days: 14

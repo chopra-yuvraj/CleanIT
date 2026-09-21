@@ -1,4 +1,4 @@
-// CleanIT — Cleaning Request Model
+// CleanIT — Cleaning Request Model (MongoDB)
 
 enum RequestStatus {
   open,
@@ -72,7 +72,7 @@ class CleaningRequest {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  // Joined fields (from relationships)
+  // Denormalized / embedded fields
   final String? studentName;
   final String? studentBlock;
   final String? studentRoom;
@@ -128,31 +128,33 @@ class CleaningRequest {
   }
 
   factory CleaningRequest.fromJson(Map<String, dynamic> json) {
-    // Handle nested student data from joins
-    final student = json['student'] as Map<String, dynamic>?;
-    // Handle nested assignment data from joins
-    final assignments = json['assignments'] as List<dynamic>?;
-    final assignment =
-        (assignments != null && assignments.isNotEmpty)
-            ? assignments.first as Map<String, dynamic>
-            : null;
-    final cleaner = assignment?['cleaner'] as Map<String, dynamic>?;
+    // Handle embedded assignment (MongoDB embedded document pattern)
+    final assignment = json['assignment'] as Map<String, dynamic>?;
 
     return CleaningRequest(
-      id: json['id'] as String,
-      studentId: json['student_id'] as String,
-      status: RequestStatus.fromString(json['status'] as String),
-      isSweeping: json['is_sweeping'] as bool? ?? false,
-      isMopping: json['is_mopping'] as bool? ?? false,
-      isUrgent: json['is_urgent'] as bool? ?? false,
+      // MongoDB _id or API-transformed 'id'
+      id: (json['id'] ?? json['_id'] ?? '') as String,
+      studentId: (json['studentId'] ?? json['student_id'] ?? '') as String,
+      status: RequestStatus.fromString((json['status'] ?? 'OPEN') as String),
+      isSweeping: json['isSweeping'] as bool? ?? json['is_sweeping'] as bool? ?? false,
+      isMopping: json['isMopping'] as bool? ?? json['is_mopping'] as bool? ?? false,
+      isUrgent: json['isUrgent'] as bool? ?? json['is_urgent'] as bool? ?? false,
       notes: json['notes'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
-      studentName: student?['name'] as String?,
-      studentBlock: student?['block'] as String?,
-      studentRoom: student?['room_number'] as String?,
-      cleanerName: cleaner?['name'] as String?,
-      assignmentId: assignment?['id'] as String?,
+      createdAt: _parseDate(json['createdAt'] ?? json['created_at']),
+      updatedAt: _parseDate(json['updatedAt'] ?? json['updated_at']),
+      // Denormalized student info
+      studentName: json['studentName'] as String? ?? json['student_name'] as String?,
+      studentBlock: json['studentBlock'] as String? ?? json['student_block'] as String?,
+      studentRoom: json['studentRoom'] as String? ?? json['student_room'] as String?,
+      // Embedded assignment data
+      cleanerName: assignment?['cleanerName'] as String? ?? assignment?['cleaner_name'] as String?,
+      assignmentId: (assignment?['id'] ?? assignment?['_id'])?.toString(),
     );
+  }
+
+  static DateTime _parseDate(dynamic value) {
+    if (value == null) return DateTime.now();
+    if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
+    return DateTime.now();
   }
 }

@@ -6,7 +6,7 @@
 //  - Job metadata (room, tasks, notes, urgency indicator)
 //  - Primary CTA: "Scan Student QR to Finish" (camera scanner)
 //  - Secondary CTA: "Room Locked / Student Not Present" (photo → cancel)
-//  - Real-time status updates via Supabase Realtime
+//  - Status updates via polling
 // ============================================================
 
 import 'dart:async';
@@ -14,7 +14,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/request_service.dart';
+import '../services/auth_service.dart';
 
 import '../services/qr_service.dart';
 import '../services/sound_service.dart';
@@ -63,8 +64,6 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
-  // Supabase realtime subscription
-  RealtimeChannel? _realtimeChannel;
   Timer? _pollTimer;
 
   @override
@@ -84,9 +83,7 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
       _pulseController.repeat(reverse: true);
     }
 
-    _subscribeToRealtimeUpdates();
-
-    // ── Fetch full job data (student info) from DB ──
+    // ── Fetch full job data (student info) from API ──
     _fetchFullJobData();
 
     // ── Auto-poll every 5 seconds for seamless status sync ──
@@ -98,36 +95,25 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
   @override
   void dispose() {
     _pulseController.dispose();
-    _realtimeChannel?.unsubscribe();
     _pollTimer?.cancel();
     super.dispose();
   }
 
-  /// Fetch full request data including student info from the database.
+  /// Fetch full request data including student info from the API.
   /// This resolves "Room N/A" when the job was created from a realtime
   /// event that doesn't include joined student data.
   Future<void> _fetchFullJobData() async {
     try {
-      final supabase = Supabase.instance.client;
-      final row = await supabase
-          .from('requests')
-          .select('''
-            status,
-            student:users!requests_student_id_fkey ( name, block, room_number )
-          ''')
-          .eq('id', _job.requestId)
-          .single();
+      final profile = AuthService.instance.currentProfile;
+      if (profile == null) return;
 
-      if (!mounted) return;
+      final jobs = await RequestService.instance.fetchCleanerJobs(profile.id);
+      final match = jobs.where((r) => r.id == _job.requestId).firstOrNull;
 
-      final student = row['student'] as Map<String, dynamic>?;
-      final block = student?['block'] as String?;
-      final room = student?['room_number'] as String?;
-      final name = student?['name'] as String?;
-      final status = row['status'] as String;
+      if (match == null || !mounted) return;
 
-      final roomLabel = (block != null && room != null)
-          ? '$block-$room'
+      final roomLabel = match.roomLabel != 'N/A'
+          ? match.roomLabel
           : _job.roomLabel;
 
       setState(() {
@@ -139,8 +125,8 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
           isMopping: _job.isMopping,
           isUrgent: _job.isUrgent,
           notes: _job.notes,
-          studentName: name ?? _job.studentName,
-          status: status,
+          studentName: match.studentName ?? _job.studentName,
+          status: match.status.dbValue,
         );
       });
     } catch (e) {
@@ -148,34 +134,26 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
     }
   }
 
-  /// Silent poll: re-fetch the request status and student data from the database.
+  /// Silent poll: re-fetch the request status and student data from the API.
   Future<void> _pollRefresh() async {
     try {
-      final supabase = Supabase.instance.client;
-      final row = await supabase
-          .from('requests')
-          .select('''
-            status,
-            student:users!requests_student_id_fkey ( name, block, room_number )
-          ''')
-          .eq('id', _job.requestId)
-          .maybeSingle();
+      final profile = AuthService.instance.currentProfile;
+      if (profile == null) return;
 
-      if (row == null || !mounted) return;
+      final jobs = await RequestService.instance.fetchCleanerJobs(profile.id);
+      final match = jobs.where((r) => r.id == _job.requestId).firstOrNull;
 
-      final newStatus = row['status'] as String;
-      final student = row['student'] as Map<String, dynamic>?;
-      final block = student?['block'] as String?;
-      final room = student?['room_number'] as String?;
-      final name = student?['name'] as String?;
+      if (!mounted) return;
 
-      final roomLabel = (block != null && room != null)
-          ? '$block-$room'
+      if (match == null) return;
+
+      final newStatus = match.status.dbValue;
+      final roomLabel = match.roomLabel != 'N/A'
+          ? match.roomLabel
           : _job.roomLabel;
 
       final needsUpdate = newStatus != _job.status ||
-          roomLabel != _job.roomLabel ||
-          (name != null && name != _job.studentName);
+          roomLabel != _job.roomLabel;
 
       if (needsUpdate) {
         setState(() {
@@ -187,7 +165,7 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
             isMopping: _job.isMopping,
             isUrgent: _job.isUrgent,
             notes: _job.notes,
-            studentName: name ?? _job.studentName,
+            studentName: match.studentName ?? _job.studentName,
             status: newStatus,
           );
         });
@@ -201,65 +179,14 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
     }
   }
 
-  /// Subscribe to real-time status changes on this request
-  void _subscribeToRealtimeUpdates() {
-    final supabase = Supabase.instance.client;
-    _realtimeChannel = supabase
-        .channel('request-${_job.requestId}')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.update,
-          schema: 'public',
-          table: 'requests',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'id',
-            value: _job.requestId,
-          ),
-          callback: (payload) {
-            final newStatus = payload.newRecord['status'] as String?;
-            if (newStatus != null && mounted) {
-              setState(() {
-                _job = CleaningJob(
-                  requestId: _job.requestId,
-                  assignmentId: _job.assignmentId,
-                  roomLabel: _job.roomLabel,
-                  isSweeping: _job.isSweeping,
-                  isMopping: _job.isMopping,
-                  isUrgent: _job.isUrgent,
-                  notes: _job.notes,
-                  studentName: _job.studentName,
-                  status: newStatus,
-                );
-              });
 
-              if (newStatus == 'COMPLETED') {
-                _showSuccessDialog();
-              }
-            }
-          },
-        )
-        .subscribe();
-  }
 
   // ── Start Job: ASSIGNED → IN_PROGRESS ──
   Future<void> _startJob() async {
     setState(() => _isStartingJob = true);
 
     try {
-      final supabase = Supabase.instance.client;
-
-      // Look up the internal user ID (users.id) from the auth UUID.
-      // The start_job() RPC expects users.id, NOT auth.users.id.
-      final userRow = await supabase
-          .from('users')
-          .select('id')
-          .eq('auth_id', supabase.auth.currentUser!.id)
-          .single();
-
-      final result = await supabase.rpc('start_job', params: {
-        'p_request_id': _job.requestId,
-        'p_cleaner_id': userRow['id'],
-      });
+      final result = await RequestService.instance.startJob(_job.requestId);
 
       if (result['success'] == true) {
         setState(() {
@@ -311,18 +238,11 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
         return;
       }
 
-      // 2. Complete the job via direct RPC call
-      final supabase = Supabase.instance.client;
-      final userRow = await supabase
-          .from('users')
-          .select('id')
-          .eq('auth_id', supabase.auth.currentUser!.id)
-          .single();
-
-      final result = await supabase.rpc('complete_job', params: {
-        'p_request_id': _job.requestId,
-        'p_cleaner_id': userRow['id'],
-      });
+      // 2. Complete the job via API call
+      final result = await RequestService.instance.verifyQR(
+        requestId: _job.requestId,
+        qrPayload: qrPayload,
+      );
 
       if (result['success'] == true) {
         SoundService.instance.play(AppSound.qrSuccess);
@@ -396,40 +316,11 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
     setState(() => _isLoading = true);
 
     try {
-      final supabase = Supabase.instance.client;
-
-      // 1. Look up internal user ID
-      final userRow = await supabase
-          .from('users')
-          .select('id')
-          .eq('auth_id', supabase.auth.currentUser!.id)
-          .single();
-
-      // 2. Upload proof photo to Supabase Storage
-      final fileName = '${_job.requestId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final filePath = 'locked-proofs/$fileName';
-      final photoBytes = await photo.readAsBytes();
-
-      await supabase.storage
-          .from('proof-photos')
-          .uploadBinary(filePath, photoBytes, fileOptions: const FileOptions(
-            contentType: 'image/jpeg',
-            upsert: false,
-          ));
-
-      final publicUrl = supabase.storage
-          .from('proof-photos')
-          .getPublicUrl(filePath);
-
-      // 3. Call the RPC function to cancel the request
-      final result = await supabase.rpc(
-        'report_room_locked',
-        params: {
-          'p_request_id': _job.requestId,
-          'p_cleaner_id': userRow['id'],
-          'p_failure_reason': 'room_locked',
-          'p_proof_url': publicUrl,
-        },
+      // Report room locked via API (photo upload handled server-side in future)
+      final result = await RequestService.instance.reportRoomLocked(
+        requestId: _job.requestId,
+        photoPath: photo.path,
+        failureReason: 'room_locked',
       );
 
       if (result['success'] == true) {
@@ -446,8 +337,6 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
           Navigator.of(context).pop();
         }
       } else {
-        // Clean up uploaded photo on failure
-        await supabase.storage.from('proof-photos').remove([filePath]);
         _showError(result['message'] ?? 'Could not submit report. Please try again.');
       }
     } catch (e) {

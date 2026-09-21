@@ -10,6 +10,7 @@ import '../models/models.dart';
 import '../services/services.dart';
 import 'student_home_screen.dart';
 import 'cleaner_dashboard_screen.dart';
+import 'admin_dashboard_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -115,9 +116,16 @@ class _AuthScreenState extends State<AuthScreen>
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => profile!.role == UserRole.student
-              ? const StudentHomeScreen()
-              : const CleanerDashboardScreen(),
+          builder: (_) {
+            final role = profile!.role;
+            if (role == UserRole.admin) {
+              return const AdminDashboardScreen();
+            } else if (role == UserRole.student) {
+              return const StudentHomeScreen();
+            } else {
+              return const CleanerDashboardScreen();
+            }
+          },
         ),
       );
     } catch (e) {

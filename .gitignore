@@ -26,9 +26,6 @@ firebase-service-account.json
 # ── Vercel ──
 .vercel/
 
-# ── Supabase local cache ──
-supabase/.temp/
-
 # ── IDE ──
 .idea/
 .vscode/

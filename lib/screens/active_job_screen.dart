@@ -11,7 +11,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../config/app_theme.dart';
 import '../models/models.dart';
 import '../services/services.dart';
@@ -35,13 +35,13 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
   int _rating = 0;
   final _commentController = TextEditingController();
 
-  RealtimeChannel? _channel;
+
 
   @override
   void initState() {
     super.initState();
     _request = widget.request;
-    _subscribeToStatus();
+
 
     // ── Auto-poll every 5 seconds for seamless status sync ──
     _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
@@ -53,35 +53,36 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
   void dispose() {
     _qrTimer?.cancel();
     _pollTimer?.cancel();
-    _channel?.unsubscribe();
+
     _commentController.dispose();
     super.dispose();
   }
 
-  /// Silent poll: re-fetch the request status from the database.
+  /// Silent poll: re-fetch the request status via the backend API.
   Future<void> _pollRefresh() async {
     try {
-      final supabase = Supabase.instance.client;
-      final row = await supabase
-          .from('requests')
-          .select('status')
-          .eq('id', _request.id)
-          .maybeSingle();
+      final profile = AuthService.instance.currentProfile;
+      if (profile == null) return;
 
-      if (row == null || !mounted) return;
+      final updated = await RequestService.instance
+          .fetchActiveStudentRequest(profile.id);
 
-      final newStatusStr = row['status'] as String;
-      final newStatus = RequestStatus.fromString(newStatusStr);
+      if (!mounted) return;
 
-      if (newStatus != _request.status) {
+      if (updated == null) {
+        // Request might be completed or cancelled
+        return;
+      }
+
+      if (updated.status != _request.status) {
         setState(() {
-          _request = _request.copyWith(status: newStatus);
+          _request = _request.copyWith(status: updated.status);
         });
 
-        if (newStatus == RequestStatus.completed) {
+        if (updated.status == RequestStatus.completed) {
           setState(() => _showFeedback = true);
         }
-        if (newStatus == RequestStatus.cancelledRoomLocked) {
+        if (updated.status == RequestStatus.cancelledRoomLocked) {
           _showLockedDialog();
         }
       }
@@ -90,25 +91,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
     }
   }
 
-  void _subscribeToStatus() {
-    _channel = RequestService.instance.subscribeToRequestStatus(
-      _request.id,
-      (newStatus) {
-        if (!mounted) return;
-        setState(() {
-          _request = _request.copyWith(status: newStatus);
-        });
 
-        if (newStatus == RequestStatus.completed) {
-          setState(() => _showFeedback = true);
-        }
-
-        if (newStatus == RequestStatus.cancelledRoomLocked) {
-          _showLockedDialog();
-        }
-      },
-    );
-  }
 
   void _generateQR() {
     final profile = AuthService.instance.currentProfile;

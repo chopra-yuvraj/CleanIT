@@ -1,10 +1,9 @@
-// CleanIT — User Model
+// CleanIT — User Model (MongoDB)
 
 enum UserRole { student, cleaner, admin }
 
 class AppUser {
   final String id;
-  final String? authId;
   final String email;
   final String name;
   final UserRole role;
@@ -15,7 +14,6 @@ class AppUser {
 
   AppUser({
     required this.id,
-    this.authId,
     required this.email,
     required this.name,
     required this.role,
@@ -30,8 +28,8 @@ class AppUser {
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
     return AppUser(
-      id: json['id'] as String,
-      authId: json['auth_id'] as String?,
+      // MongoDB uses _id, but our API transforms it to 'id'
+      id: (json['id'] ?? json['_id'] ?? '') as String,
       email: json['email'] as String,
       name: json['name'] as String,
       role: UserRole.values.firstWhere(
@@ -39,21 +37,20 @@ class AppUser {
         orElse: () => UserRole.student,
       ),
       block: json['block'] as String?,
-      roomNumber: json['room_number'] as String?,
-      fcmToken: json['fcm_token'] as String?,
-      isOnDuty: json['is_on_duty'] as bool? ?? false,
+      roomNumber: json['roomNumber'] as String?,
+      fcmToken: json['fcmToken'] as String?,
+      isOnDuty: json['isOnDuty'] as bool? ?? false,
     );
   }
 
   Map<String, dynamic> toJson() => {
         'id': id,
-        'auth_id': authId,
         'email': email,
         'name': name,
         'role': role.name,
         'block': block,
-        'room_number': roomNumber,
-        'fcm_token': fcmToken,
-        'is_on_duty': isOnDuty,
+        'roomNumber': roomNumber,
+        'fcmToken': fcmToken,
+        'isOnDuty': isOnDuty,
       };
 }
