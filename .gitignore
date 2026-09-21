@@ -8,6 +8,8 @@ build/
 *.iml
 *.lock
 !pubspec.lock
+!package-lock.json
+!backend/package-lock.json
 .flutter-plugins
 .flutter-plugins-dependencies
 

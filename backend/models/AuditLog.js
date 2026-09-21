@@ -30,13 +30,13 @@ const auditLogSchema = new mongoose.Schema(
     // The _id of the modified document
     documentId: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
+      default: null,
     },
     // What type of operation
     action: {
       type: String,
       required: true,
-      enum: ['CREATE', 'UPDATE', 'DELETE'],
+      enum: ['CREATE', 'UPDATE', 'DELETE', 'BULK_CANCEL'],
     },
     // Who performed the action
     performedBy: {
@@ -70,6 +70,7 @@ const auditLogSchema = new mongoose.Schema(
     },
   },
   {
+    suppressReservedKeysWarning: true,
     // No updatedAt needed for immutable log entries
     timestamps: false,
 
