@@ -54,9 +54,11 @@ app.use((err, req, res, _next) => {
 });
 
 // ── Start Server ──
-app.listen(PORT, () => {
-  console.log(`🚀 CleanIT API running on port ${PORT}`);
-  console.log(`   Health: http://localhost:${PORT}/api/health`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 CleanIT API running on port ${PORT}`);
+    console.log(`   Health: http://localhost:${PORT}/api/health`);
+  });
+}
 
 module.exports = app;
