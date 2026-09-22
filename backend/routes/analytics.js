@@ -557,4 +557,142 @@ router.get('/cleaner-efficiency', auth, async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────
+//  GET /api/analytics/cleaner-summary/:id — Single cleaner profile
+//
+//  ★ User-Defined Functionality: Cleaner Performance Summary
+//  Returns a comprehensive performance profile for one cleaner:
+//  total jobs, avg completion time, average rating, busiest day.
+//  Uses $lookup across requests + feedback + users collections.
+// ─────────────────────────────────────────────────────────────
+router.get('/cleaner-summary/:id', auth, async (req, res) => {
+  try {
+    const cleanerId = new mongoose.Types.ObjectId(req.params.id);
+
+    // 1. Cleaner info
+    const cleaner = await User.findOne({ _id: cleanerId, role: 'cleaner' }).lean();
+    if (!cleaner) {
+      return res.status(404).json({ error: 'Cleaner not found' });
+    }
+
+    // 2. Job stats via aggregation
+    const [jobStats] = await Request.aggregate([
+      {
+        $match: {
+          'assignment.cleanerId': cleanerId,
+          isDeleted: { $ne: true },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalJobs: { $sum: 1 },
+          completedJobs: {
+            $sum: { $cond: [{ $eq: ['$status', 'COMPLETED'] }, 1, 0] },
+          },
+          cancelledJobs: {
+            $sum: { $cond: [{ $eq: ['$status', 'CANCELLED_ROOM_LOCKED'] }, 1, 0] },
+          },
+          avgCompletionMs: {
+            $avg: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ['$status', 'COMPLETED'] },
+                    { $ne: ['$assignment.completedAt', null] },
+                    { $ne: ['$assignment.assignedAt', null] },
+                  ],
+                },
+                { $subtract: ['$assignment.completedAt', '$assignment.assignedAt'] },
+                null,
+              ],
+            },
+          },
+        },
+      },
+    ]);
+
+    // 3. Average rating from feedback for this cleaner's completed requests
+    const [ratingStats] = await Request.aggregate([
+      {
+        $match: {
+          'assignment.cleanerId': cleanerId,
+          status: 'COMPLETED',
+          isDeleted: { $ne: true },
+        },
+      },
+      {
+        $lookup: {
+          from: 'feedbacks',
+          localField: '_id',
+          foreignField: 'requestId',
+          as: 'feedback',
+        },
+      },
+      { $unwind: { path: '$feedback', preserveNullAndEmptyArrays: false } },
+      {
+        $group: {
+          _id: null,
+          avgRating: { $avg: '$feedback.rating' },
+          totalRatings: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // 4. Busiest day of the week
+    const busiestDay = await Request.aggregate([
+      {
+        $match: {
+          'assignment.cleanerId': cleanerId,
+          status: 'COMPLETED',
+          isDeleted: { $ne: true },
+        },
+      },
+      {
+        $group: {
+          _id: { $dayOfWeek: '$assignment.assignedAt' },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+      { $limit: 1 },
+      {
+        $project: {
+          _id: 0,
+          dayName: {
+            $arrayElemAt: [
+              ['', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+              '$_id',
+            ],
+          },
+          count: 1,
+        },
+      },
+    ]);
+
+    res.json({
+      success: true,
+      summary: {
+        cleanerId: cleaner._id.toString(),
+        cleanerName: cleaner.name,
+        isOnDuty: cleaner.isOnDuty,
+        totalJobs: jobStats?.totalJobs || 0,
+        completedJobs: jobStats?.completedJobs || 0,
+        cancelledJobs: jobStats?.cancelledJobs || 0,
+        avgCompletionMinutes: jobStats?.avgCompletionMs
+          ? Math.round((jobStats.avgCompletionMs / 60000) * 10) / 10
+          : 0,
+        avgRating: ratingStats?.avgRating
+          ? Math.round(ratingStats.avgRating * 10) / 10
+          : null,
+        totalRatings: ratingStats?.totalRatings || 0,
+        busiestDay: busiestDay[0] || null,
+      },
+    });
+  } catch (error) {
+    console.error('Cleaner summary error:', error);
+    res.status(500).json({ error: 'Failed to fetch cleaner summary' });
+  }
+});
+
 module.exports = router;

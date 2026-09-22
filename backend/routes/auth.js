@@ -196,4 +196,65 @@ router.put('/toggle-duty', auth, async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────
+//  PUT /api/auth/change-password — Change user password
+//
+//  ★ User-Defined Functionality: Password Management
+//  Validates the current password before accepting the new one.
+//  The pre-save hook on the User model auto-hashes the new password.
+// ─────────────────────────────────────────────────────────────
+router.put('/change-password', auth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        error: 'Missing fields',
+        message: 'Both currentPassword and newPassword are required.',
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        error: 'Weak password',
+        message: 'New password must be at least 6 characters.',
+      });
+    }
+
+    // Fetch user WITH password field (normally excluded by select: false)
+    const user = await User.findById(req.userId).select('+password');
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Verify current password
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(401).json({
+        error: 'Incorrect password',
+        message: 'Current password is incorrect.',
+      });
+    }
+
+    // Update password (pre-save hook will hash it)
+    user.password = newPassword;
+    await user.save();
+
+    // Audit log
+    await logAudit({
+      collection: 'users',
+      documentId: user._id,
+      action: 'UPDATE',
+      performedBy: req.user,
+      changes: { password: { from: '[REDACTED]', to: '[REDACTED]' } },
+      summary: `Password changed by ${user.name}`,
+    });
+
+    res.json({ success: true, message: 'Password changed successfully.' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
 module.exports = router;

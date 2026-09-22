@@ -515,4 +515,459 @@ router.get('/aggregation-showcase', auth, async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────
+//  GET /api/dbms/lookup-demo — $lookup Multi-Collection Join
+//
+//  ★ NoSQL Functionality: $lookup (MongoDB's JOIN equivalent)
+//  Joins requests → users (student) → feedback in a single
+//  aggregation pipeline, demonstrating how MongoDB handles
+//  cross-collection relationships without traditional SQL JOINs.
+// ─────────────────────────────────────────────────────────────
+router.get('/lookup-demo', auth, async (req, res) => {
+  try {
+    const results = await Request.aggregate([
+      // Only completed, non-deleted requests
+      { $match: { status: 'COMPLETED', isDeleted: { $ne: true } } },
+      { $limit: 10 },
+
+      // ★ $lookup #1 — Join with Users to get student details
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'studentId',
+          foreignField: '_id',
+          as: 'studentDetails',
+        },
+      },
+      { $unwind: { path: '$studentDetails', preserveNullAndEmptyArrays: true } },
+
+      // ★ $lookup #2 — Join with Users to get cleaner details
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'assignment.cleanerId',
+          foreignField: '_id',
+          as: 'cleanerDetails',
+        },
+      },
+      { $unwind: { path: '$cleanerDetails', preserveNullAndEmptyArrays: true } },
+
+      // ★ $lookup #3 — Join with Feedback
+      {
+        $lookup: {
+          from: 'feedbacks',
+          localField: '_id',
+          foreignField: 'requestId',
+          as: 'feedback',
+        },
+      },
+      { $unwind: { path: '$feedback', preserveNullAndEmptyArrays: true } },
+
+      // Shape the output
+      {
+        $project: {
+          _id: 0,
+          requestId: { $toString: '$_id' },
+          room: {
+            $concat: [
+              { $ifNull: ['$studentBlock', '?'] },
+              '-',
+              { $ifNull: ['$studentRoom', '?'] },
+            ],
+          },
+          studentName: { $ifNull: ['$studentDetails.name', '$studentName'] },
+          studentEmail: { $ifNull: ['$studentDetails.email', 'N/A'] },
+          cleanerName: { $ifNull: ['$cleanerDetails.name', 'N/A'] },
+          cleanerOnDuty: { $ifNull: ['$cleanerDetails.isOnDuty', false] },
+          feedbackRating: { $ifNull: ['$feedback.rating', null] },
+          feedbackComment: { $ifNull: ['$feedback.comment', null] },
+          completedAt: '$assignment.completedAt',
+        },
+      },
+    ]);
+
+    res.json({
+      success: true,
+      title: '$lookup Multi-Collection Join Demo',
+      description: [
+        'This pipeline performs THREE $lookup operations in a single query:',
+        '1. requests → users (student details)',
+        '2. requests → users (cleaner details)',
+        '3. requests → feedbacks (student rating)',
+        'In SQL, this would require 3 JOIN clauses. MongoDB executes them sequentially in the pipeline.',
+      ],
+      lookupCount: 3,
+      resultCount: results.length,
+      results,
+    });
+  } catch (error) {
+    console.error('Lookup demo error:', error);
+    res.status(500).json({ error: 'Failed to run lookup demo' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+//  GET /api/dbms/random-sample — $sample Random Sampling
+//
+//  ★ NoSQL Functionality: $sample (Random Document Selection)
+//  Uses MongoDB's $sample stage to fetch random documents.
+//  Useful for QA auditing or random spot-checks.
+//  This is a NoSQL-native feature not easily replicated in SQL.
+// ─────────────────────────────────────────────────────────────
+router.get('/random-sample', auth, async (req, res) => {
+  try {
+    const sampleSize = Math.min(parseInt(req.query.size) || 5, 20);
+
+    // ★ $sample — Randomly selects documents from the collection
+    const randomRequests = await Request.aggregate([
+      { $match: { isDeleted: { $ne: true } } },
+      { $sample: { size: sampleSize } },
+      {
+        $project: {
+          _id: 0,
+          requestId: { $toString: '$_id' },
+          status: 1,
+          room: {
+            $concat: [
+              { $ifNull: ['$studentBlock', '?'] },
+              '-',
+              { $ifNull: ['$studentRoom', '?'] },
+            ],
+          },
+          studentName: 1,
+          isUrgent: 1,
+          createdAt: 1,
+          tasks: {
+            sweeping: '$isSweeping',
+            mopping: '$isMopping',
+          },
+        },
+      },
+    ]);
+
+    const randomFeedback = await Feedback.aggregate([
+      { $sample: { size: sampleSize } },
+      {
+        $project: {
+          _id: 0,
+          feedbackId: { $toString: '$_id' },
+          rating: 1,
+          comment: 1,
+          createdAt: 1,
+        },
+      },
+    ]);
+
+    res.json({
+      success: true,
+      title: '$sample Random Sampling Demo',
+      description: [
+        'MongoDB\'s $sample stage uses a pseudo-random cursor to select documents.',
+        'When N < 5% of collection, it uses a random sort. Otherwise, it does a random walk.',
+        'This is useful for QA auditing, A/B testing, or data sampling.',
+        'Equivalent SQL (non-standard): SELECT * FROM table ORDER BY RANDOM() LIMIT N',
+      ],
+      sampleSize,
+      randomRequests,
+      randomFeedback,
+    });
+  } catch (error) {
+    console.error('Random sample error:', error);
+    res.status(500).json({ error: 'Failed to run random sample' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+//  GET /api/dbms/bucket-analysis — $bucket Histogram
+//
+//  ★ NoSQL Functionality: $bucket (Data Distribution Analysis)
+//  Uses $bucket to create completion-time histograms.
+//  Groups requests into time-based buckets for analysis.
+// ─────────────────────────────────────────────────────────────
+router.get('/bucket-analysis', auth, async (req, res) => {
+  try {
+    // Calculate completion time and bucket it
+    const completionBuckets = await Request.aggregate([
+      {
+        $match: {
+          status: 'COMPLETED',
+          'assignment.assignedAt': { $ne: null },
+          'assignment.completedAt': { $ne: null },
+          isDeleted: { $ne: true },
+        },
+      },
+      {
+        // ★ $addFields — Compute completion time in minutes
+        $addFields: {
+          completionMinutes: {
+            $divide: [
+              { $subtract: ['$assignment.completedAt', '$assignment.assignedAt'] },
+              60000,
+            ],
+          },
+        },
+      },
+      {
+        // ★ $bucket — Group into time-based histogram buckets
+        $bucket: {
+          groupBy: '$completionMinutes',
+          boundaries: [0, 15, 30, 60, 120, 1440], // 0-15min, 15-30min, 30-60min, 1-2hr, 2hr-24hr
+          default: 'over_24h',
+          output: {
+            count: { $sum: 1 },
+            avgMinutes: { $avg: '$completionMinutes' },
+            requests: {
+              $push: {
+                id: { $toString: '$_id' },
+                room: { $concat: [{ $ifNull: ['$studentBlock', '?'] }, '-', { $ifNull: ['$studentRoom', '?'] }] },
+                minutes: { $round: ['$completionMinutes', 1] },
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          bucketLabel: {
+            $switch: {
+              branches: [
+                { case: { $eq: ['$_id', 0] }, then: '0-15 minutes' },
+                { case: { $eq: ['$_id', 15] }, then: '15-30 minutes' },
+                { case: { $eq: ['$_id', 30] }, then: '30-60 minutes' },
+                { case: { $eq: ['$_id', 60] }, then: '1-2 hours' },
+                { case: { $eq: ['$_id', 120] }, then: '2-24 hours' },
+              ],
+              default: 'Over 24 hours',
+            },
+          },
+          count: 1,
+          avgMinutes: { $round: ['$avgMinutes', 1] },
+          sampleRequests: { $slice: ['$requests', 3] }, // Only show 3 samples per bucket
+        },
+      },
+    ]);
+
+    // Also demonstrate $bucketAuto for rating distribution
+    const ratingBuckets = await Feedback.aggregate([
+      {
+        // ★ $bucketAuto — MongoDB automatically determines bucket boundaries
+        $bucketAuto: {
+          groupBy: '$rating',
+          buckets: 3, // MongoDB determines optimal 3 groups
+          output: {
+            count: { $sum: 1 },
+            avgRating: { $avg: '$rating' },
+          },
+        },
+      },
+    ]);
+
+    res.json({
+      success: true,
+      title: '$bucket / $bucketAuto Histogram Analysis',
+      description: [
+        '$bucket groups documents into fixed, user-defined ranges (like a histogram).',
+        '$bucketAuto lets MongoDB automatically determine optimal bucket boundaries.',
+        'Both are NoSQL-specific aggregation stages for data distribution analysis.',
+      ],
+      completionTimeHistogram: completionBuckets,
+      ratingAutoHistogram: ratingBuckets,
+    });
+  } catch (error) {
+    console.error('Bucket analysis error:', error);
+    res.status(500).json({ error: 'Failed to run bucket analysis' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+//  GET /api/dbms/graph-lookup — $graphLookup Recursive Audit Trail
+//
+//  ★ NoSQL Functionality: $graphLookup (Recursive Graph Traversal)
+//  Uses $graphLookup to build a chain of all audit events related
+//  to a specific document or set of documents. Demonstrates
+//  MongoDB's ability to perform recursive/graph queries within
+//  the aggregation framework.
+// ─────────────────────────────────────────────────────────────
+router.get('/graph-lookup', auth, async (req, res) => {
+  try {
+    // Find all audit events and recursively connect related events
+    // by matching performedBy → documentId (who acted → what was affected)
+    const auditChain = await AuditLog.aggregate([
+      // Start from recent audit logs
+      { $sort: { timestamp: -1 } },
+      { $limit: 5 },
+
+      // ★ $graphLookup — Recursively find related audit entries
+      // Starting from a user (performedBy), find all documents they touched,
+      // then find all other actions on those same documents by other users.
+      {
+        $graphLookup: {
+          from: 'auditlogs',
+          startWith: '$documentId',             // Start from this document ID
+          connectFromField: 'documentId',       // Follow the documentId field
+          connectToField: 'documentId',         // Match against documentId in other docs
+          as: 'relatedEvents',                  // Output array
+          maxDepth: 2,                          // Limit recursion depth
+          depthField: 'depth',                  // Track the recursion depth
+          restrictSearchWithMatch: {
+            timestamp: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+          },
+        },
+      },
+
+      // Shape the output
+      {
+        $project: {
+          _id: 0,
+          originEvent: {
+            id: { $toString: '$_id' },
+            action: '$action',
+            collection: '$collection',
+            documentId: { $toString: '$documentId' },
+            summary: '$summary',
+            performedBy: '$performedByName',
+            timestamp: '$timestamp',
+          },
+          relatedEventsCount: { $size: '$relatedEvents' },
+          relatedEvents: {
+            $map: {
+              input: { $slice: ['$relatedEvents', 5] }, // Limit to 5 related events
+              as: 'evt',
+              in: {
+                id: { $toString: '$$evt._id' },
+                action: '$$evt.action',
+                summary: '$$evt.summary',
+                performedBy: '$$evt.performedByName',
+                depth: '$$evt.depth',
+                timestamp: '$$evt.timestamp',
+              },
+            },
+          },
+        },
+      },
+    ]);
+
+    res.json({
+      success: true,
+      title: '$graphLookup Recursive Audit Trail',
+      description: [
+        '$graphLookup performs recursive searches, similar to SQL recursive CTEs.',
+        'Starting from recent audit events, it finds ALL related events on the same document.',
+        'This creates a full "event chain" showing every action taken on a document over time.',
+        'Use case: Trace the complete lifecycle of a cleaning request from creation to completion.',
+      ],
+      maxRecursionDepth: 2,
+      chains: auditChain,
+    });
+  } catch (error) {
+    console.error('Graph lookup error:', error);
+    res.status(500).json({ error: 'Failed to run graph lookup' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+//  POST /api/dbms/materialized-view — $merge Materialized View
+//
+//  ★ NoSQL Functionality: $merge (Persist Aggregation Results)
+//  Uses $merge to write aggregation results into a new collection
+//  (request_summary_mv), creating a materialized view of
+//  per-block request summaries for fast dashboard reads.
+// ─────────────────────────────────────────────────────────────
+router.post('/materialized-view', auth, async (req, res) => {
+  try {
+    const targetCollection = 'request_summary_mv';
+
+    // ★ $merge — Persist aggregation results into a collection
+    // This creates/updates a materialized view of block-level summaries
+    await Request.aggregate([
+      { $match: { isDeleted: { $ne: true } } },
+      {
+        $group: {
+          _id: { $ifNull: ['$studentBlock', 'Unknown'] },
+          totalRequests: { $sum: 1 },
+          openRequests: {
+            $sum: { $cond: [{ $eq: ['$status', 'OPEN'] }, 1, 0] },
+          },
+          completedRequests: {
+            $sum: { $cond: [{ $eq: ['$status', 'COMPLETED'] }, 1, 0] },
+          },
+          cancelledRequests: {
+            $sum: { $cond: [{ $eq: ['$status', 'CANCELLED_ROOM_LOCKED'] }, 1, 0] },
+          },
+          urgentRequests: {
+            $sum: { $cond: [{ $eq: ['$isUrgent', true] }, 1, 0] },
+          },
+          avgCompletionMs: {
+            $avg: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ['$status', 'COMPLETED'] },
+                    { $ne: ['$assignment.completedAt', null] },
+                  ],
+                },
+                { $subtract: ['$assignment.completedAt', '$createdAt'] },
+                null,
+              ],
+            },
+          },
+          lastRequestDate: { $max: '$createdAt' },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          block: '$_id',
+          totalRequests: 1,
+          openRequests: 1,
+          completedRequests: 1,
+          cancelledRequests: 1,
+          urgentRequests: 1,
+          avgCompletionMinutes: {
+            $round: [{ $divide: [{ $ifNull: ['$avgCompletionMs', 0] }, 60000] }, 1],
+          },
+          lastRequestDate: 1,
+          generatedAt: new Date(),
+        },
+      },
+      {
+        // ★ $merge — Write results to a target collection
+        // 'replace' mode: if a document with the same _id exists, replace it
+        $merge: {
+          into: targetCollection,
+          on: '_id',
+          whenMatched: 'replace',
+          whenNotMatched: 'insert',
+        },
+      },
+    ]);
+
+    // Read back the materialized view to confirm
+    const db = mongoose.connection.db;
+    const materializedData = await db.collection(targetCollection).find({}).toArray();
+
+    res.json({
+      success: true,
+      title: '$merge Materialized View Demo',
+      description: [
+        '$merge persists aggregation pipeline results into a target collection.',
+        `The pipeline computed per-block summaries and wrote them to "${targetCollection}".`,
+        'This creates a "materialized view" — pre-computed data for fast dashboard reads.',
+        'Unlike regular views ($out), $merge can update existing documents incrementally.',
+        'Refresh this endpoint anytime to update the materialized view with latest data.',
+      ],
+      targetCollection,
+      documentCount: materializedData.length,
+      materializedView: materializedData.map((d) => ({
+        ...d,
+        _id: d._id?.toString ? d._id.toString() : d._id,
+      })),
+    });
+  } catch (error) {
+    console.error('Materialized view error:', error);
+    res.status(500).json({ error: 'Failed to create materialized view' });
+  }
+});
+
 module.exports = router;

@@ -500,6 +500,61 @@ router.delete('/:id', auth, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
+//  POST /api/requests/:id/cancel — Student cancels own request
+//
+//  ★ User-Defined Functionality: Student Self-Cancellation
+//  Allows a student to cancel their own OPEN request before
+//  any cleaner accepts it. Once ASSIGNED, cancellation is blocked.
+// ─────────────────────────────────────────────────────────────
+router.post('/:id/cancel', auth, roleGuard('student', 'admin'), async (req, res) => {
+  try {
+    const request = await Request.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        studentId: req.userId,
+        status: 'OPEN', // Can only cancel if still OPEN
+        isDeleted: { $ne: true },
+      },
+      {
+        $set: {
+          status: 'CANCELLED_ROOM_LOCKED',
+          isDeleted: true,
+          deletedAt: new Date(),
+          deletedBy: req.userId,
+        },
+      },
+      { new: true }
+    );
+
+    if (!request) {
+      return res.status(409).json({
+        success: false,
+        code: 'CANNOT_CANCEL',
+        message: 'Cannot cancel. The request may not exist, is already accepted by a cleaner, or was already cancelled.',
+      });
+    }
+
+    await logAudit({
+      collection: 'requests',
+      documentId: request._id,
+      action: 'DELETE',
+      performedBy: req.user,
+      changes: { status: { from: 'OPEN', to: 'CANCELLED_ROOM_LOCKED' } },
+      summary: `Request self-cancelled by student ${req.user.name}`,
+    });
+
+    res.json({ success: true, message: 'Request cancelled successfully.' });
+  } catch (error) {
+    console.error('Cancel request error:', error);
+    res.status(500).json({
+      success: false,
+      code: 'INTERNAL_ERROR',
+      message: 'Failed to cancel request.',
+    });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
 //  GET /api/requests/search — Full-text search on notes
 //
 //  ★ DBMS Feature: Text Index / Full-text Search

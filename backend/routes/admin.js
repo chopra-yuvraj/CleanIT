@@ -456,5 +456,144 @@ router.get('/user-search', auth, async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────
+//  PUT /api/admin/restore-request/:id — Restore a soft-deleted request
+//
+//  ★ User-Defined Functionality: Admin Data Recovery
+//  Admins can undo a soft-delete, restoring the request record.
+//  Uses a transaction to atomically restore + create an audit log.
+// ─────────────────────────────────────────────────────────────
+router.put('/restore-request/:id', auth, roleGuard('admin'), async (req, res) => {
+  const session = await mongoose.startSession();
+  try {
+    let result;
+
+    await session.withTransaction(async () => {
+      const request = await Request.findOneAndUpdate(
+        {
+          _id: req.params.id,
+          isDeleted: true, // Must be currently deleted
+        },
+        {
+          $set: {
+            isDeleted: false,
+            deletedAt: null,
+            deletedBy: null,
+          },
+        },
+        { new: true, session }
+      );
+
+      if (!request) {
+        result = { success: false, message: 'Request not found or is not deleted.' };
+        return;
+      }
+
+      // Create audit log within the same transaction
+      await AuditLog.create(
+        [{
+          collection: 'requests',
+          documentId: request._id,
+          action: 'UPDATE',
+          performedBy: req.userId,
+          performedByName: req.user.name,
+          changes: { isDeleted: { from: true, to: false } },
+          summary: `Soft-deleted request restored by admin ${req.user.name}`,
+        }],
+        { session }
+      );
+
+      result = {
+        success: true,
+        message: 'Request restored successfully.',
+        request: {
+          id: request._id.toString(),
+          status: request.status,
+          studentName: request.studentName,
+          studentRoom: `${request.studentBlock}-${request.studentRoom}`,
+        },
+      };
+    });
+
+    const statusCode = result.success ? 200 : 404;
+    res.status(statusCode).json(result);
+  } catch (error) {
+    console.error('Restore request error:', error);
+    res.status(500).json({ error: 'Failed to restore request' });
+  } finally {
+    await session.endSession();
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+//  GET /api/admin/dashboard-counts — At-a-glance admin metrics
+//
+//  ★ User-Defined Functionality: Admin Dashboard Counts
+//  Aggregates counts across multiple collections in a single
+//  endpoint for the admin dashboard overview.
+// ─────────────────────────────────────────────────────────────
+router.get('/dashboard-counts', auth, roleGuard('admin'), async (req, res) => {
+  try {
+    // Run all count queries in parallel using Promise.all
+    const [
+      totalStudents,
+      totalCleaners,
+      totalAdmins,
+      activeRequests,
+      completedRequests,
+      totalFeedback,
+      pendingFeedback,
+      recentAuditLogs,
+    ] = await Promise.all([
+      User.countDocuments({ role: 'student' }),
+      User.countDocuments({ role: 'cleaner' }),
+      User.countDocuments({ role: 'admin' }),
+      Request.countDocuments({
+        status: { $in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] },
+        isDeleted: { $ne: true },
+      }),
+      Request.countDocuments({ status: 'COMPLETED', isDeleted: { $ne: true } }),
+      Feedback.countDocuments({}),
+      // Completed requests without feedback
+      Request.countDocuments({
+        status: 'COMPLETED',
+        isDeleted: { $ne: true },
+        _id: {
+          $nin: await Feedback.distinct('requestId'),
+        },
+      }),
+      AuditLog.countDocuments({
+        timestamp: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      }),
+    ]);
+
+    res.json({
+      success: true,
+      counts: {
+        users: {
+          students: totalStudents,
+          cleaners: totalCleaners,
+          admins: totalAdmins,
+          total: totalStudents + totalCleaners + totalAdmins,
+        },
+        requests: {
+          active: activeRequests,
+          completed: completedRequests,
+        },
+        feedback: {
+          total: totalFeedback,
+          pendingReviews: pendingFeedback,
+        },
+        auditLogs: {
+          last24Hours: recentAuditLogs,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Dashboard counts error:', error);
+    res.status(500).json({ error: 'Failed to fetch dashboard counts' });
+  }
+});
+
 module.exports = router;
 
