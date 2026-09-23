@@ -129,6 +129,91 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     );
   }
 
+  /// Student self-cancellation — only succeeds when status is still OPEN.
+  /// The backend uses a single atomic findOneAndUpdate filtered on
+  /// status:"OPEN", so a simultaneous cleaner accept safely wins.
+  Future<void> _cancelRequest(CleaningRequest r) async {
+    final c = AppTheme.of(context);
+
+    // ── Confirmation dialog ──
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: c.base,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.cancel_rounded, color: c.red, size: 26),
+            const SizedBox(width: 10),
+            Text('Cancel Request?',
+                style: TextStyle(color: c.text, fontSize: 18)),
+          ],
+        ),
+        content: Text(
+          'This will cancel your cleaning request for Room ${r.roomLabel}. '
+          'If a cleaner has already accepted it, cancellation will fail safely.',
+          style: TextStyle(color: c.subtext0, fontSize: 14, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Keep It', style: TextStyle(color: c.overlay0)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: c.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Yes, Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final result = await _requestService.cancelRequest(r.id);
+
+    if (!mounted) return;
+
+    if (result['success'] == true) {
+      SoundService.instance.play(AppSound.error); // brief alert tone
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Request cancelled.',
+              style: TextStyle(
+                  color: Color(0xFF1E1E2E), fontWeight: FontWeight.w600)),
+          backgroundColor: AppTheme.peach,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      _loadData();
+    } else {
+      final code = result['code'] as String?;
+      final message = code == 'CANNOT_CANCEL'
+          ? 'Could not cancel — a cleaner already accepted this request.'
+          : (result['message'] ?? 'Failed to cancel request.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message,
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.w500)),
+          backgroundColor: AppTheme.red,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      // Refresh anyway — the request may have moved to ASSIGNED
+      _loadData();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = AppTheme.of(context);
@@ -211,8 +296,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                   if (_history.isEmpty)
                     _buildEmptyState(c)
                   else
+                    // Show all non-active history PLUS any OPEN requests
+                    // (OPEN = broadcast, no cleaner yet → student can cancel)
                     ..._history
-                        .where((r) => !r.status.isActive)
+                        .where((r) => !r.status.isActive || r.status == RequestStatus.open)
                         .take(10)
                         .map((r) => _buildHistoryCard(r, c)),
                 ],
@@ -476,63 +563,104 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   }
 
   Widget _buildHistoryCard(CleaningRequest r, ThemeColors c) {
+    final isOpen = r.status == RequestStatus.open;
+    final statusColor = _statusColor(r.status, c);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: c.base,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: c.surface0),
+        border: Border.all(
+          color: isOpen ? c.blue.withValues(alpha: 0.35) : c.surface0,
+          width: isOpen ? 1.5 : 1,
+        ),
       ),
-      child: Row(
-        children: [
-          // Status icon
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _statusColor(r.status, c).withValues(alpha: 0.15),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            // Status icon
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: statusColor.withValues(alpha: 0.15),
+              ),
+              child: Icon(
+                isOpen
+                    ? Icons.hourglass_top_rounded
+                    : r.status == RequestStatus.completed
+                        ? Icons.check_circle_rounded
+                        : Icons.cancel_rounded,
+                color: statusColor,
+                size: 20,
+              ),
             ),
-            child: Icon(
-              r.status == RequestStatus.completed
-                  ? Icons.check_circle_rounded
-                  : Icons.cancel_rounded,
-              color: _statusColor(r.status, c),
-              size: 20,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    r.tasksSummary,
+                    style: GoogleFonts.outfit(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: c.text,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        r.status.displayLabel,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: statusColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (isOpen) ...[
+                        const SizedBox(width: 6),
+                        Text('· waiting for cleaner',
+                            style: TextStyle(
+                                fontSize: 11, color: c.overlay0)),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  r.tasksSummary,
-                  style: GoogleFonts.outfit(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: c.text,
+            const SizedBox(width: 8),
+            // Time OR cancel button for OPEN requests
+            if (isOpen)
+              Tooltip(
+                message: 'Cancel this request',
+                child: InkWell(
+                  onTap: () => _cancelRequest(r),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: c.red.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: c.red.withValues(alpha: 0.3)),
+                    ),
+                    child: Icon(Icons.close_rounded,
+                        color: c.red, size: 18),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  r.status.displayLabel,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _statusColor(r.status, c),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Time
-          Text(
-            _timeAgo(r.createdAt),
-            style: TextStyle(color: c.overlay0, fontSize: 12),
-          ),
-        ],
+              )
+            else
+              Text(
+                _timeAgo(r.createdAt),
+                style: TextStyle(color: c.overlay0, fontSize: 12),
+              ),
+          ],
+        ),
       ),
     );
   }

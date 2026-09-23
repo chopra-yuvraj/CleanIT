@@ -82,7 +82,35 @@ class RequestService {
     }
   }
 
-  /// Submit feedback for a completed request.
+  /// Student cancels their own OPEN request.
+  ///
+  /// Uses a single atomic [findOneAndUpdate] on the backend filtered on
+  /// `status: "OPEN"`, so if a cleaner accepts in the same instant this
+  /// call is in-flight, the cancellation safely fails with [CANNOT_CANCEL]
+  /// instead of corrupting state.
+  Future<Map<String, dynamic>> cancelRequest(String requestId) async {
+    try {
+      final response = await _api.post('/requests/$requestId/cancel');
+      return {
+        'success': response['success'] ?? true,
+        'message': response['message'] ?? 'Request cancelled.',
+      };
+    } on ApiException catch (e) {
+      return {
+        'success': false,
+        'code': e.code ?? 'CANNOT_CANCEL',
+        'message': e.message,
+      };
+    } catch (e) {
+      debugPrint('Cancel request error: $e');
+      return {
+        'success': false,
+        'code': 'INTERNAL_ERROR',
+        'message': 'Failed to cancel request.',
+      };
+    }
+  }
+
   Future<void> submitFeedback({
     required String requestId,
     required String studentId,
