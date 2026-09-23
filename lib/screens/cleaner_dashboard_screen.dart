@@ -201,8 +201,9 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
+        final c = AppTheme.of(ctx);
         return AlertDialog(
-          backgroundColor: AppTheme.base,
+          backgroundColor: c.base,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           contentPadding: const EdgeInsets.all(24),
@@ -217,7 +218,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
                       const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: AppTheme.red,
+                    color: c.red,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Row(
@@ -243,11 +244,11 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: request.isUrgent
-                      ? AppTheme.red.withValues(alpha: 0.15)
-                      : AppTheme.blue.withValues(alpha: 0.15),
+                      ? c.red.withValues(alpha: 0.15)
+                      : c.blue.withValues(alpha: 0.15),
                 ),
                 child: Icon(Icons.meeting_room_rounded,
-                    color: request.isUrgent ? AppTheme.red : AppTheme.blue,
+                    color: request.isUrgent ? c.red : c.blue,
                     size: 28),
               ),
               const SizedBox(height: 14),
@@ -255,7 +256,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
                 'New Request',
                 style: GoogleFonts.outfit(
                     fontSize: 13,
-                    color: AppTheme.overlay0,
+                    color: c.overlay0,
                     fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 4),
@@ -264,13 +265,13 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
                 style: GoogleFonts.outfit(
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
-                    color: Colors.white),
+                    color: c.text),
               ),
               const SizedBox(height: 12),
 
               // Tasks
               Text(request.tasksSummary,
-                  style: const TextStyle(color: AppTheme.teal, fontSize: 15)),
+                  style: TextStyle(color: c.teal, fontSize: 15)),
               const SizedBox(height: 8),
 
               // Notes
@@ -279,19 +280,19 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppTheme.surface0.withValues(alpha: 0.5),
+                    color: c.surface0.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.sticky_note_2,
-                          color: AppTheme.yellow, size: 16),
+                      Icon(Icons.sticky_note_2,
+                          color: c.yellow, size: 16),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(request.notes!,
-                            style: const TextStyle(
-                                color: AppTheme.subtext0, fontSize: 13)),
+                            style: TextStyle(
+                                color: c.subtext0, fontSize: 13)),
                       ),
                     ],
                   ),
@@ -314,8 +315,8 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
                       style: GoogleFonts.outfit(
                           fontSize: 17, fontWeight: FontWeight.w700)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.green,
-                    foregroundColor: AppTheme.crust,
+                    backgroundColor: c.green,
+                    foregroundColor: c.crust,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
                   ),
@@ -328,8 +329,8 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
                 width: double.infinity,
                 child: TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Decline',
-                      style: TextStyle(color: AppTheme.overlay0, fontSize: 15)),
+                  child: Text('Decline',
+                      style: TextStyle(color: c.overlay0, fontSize: 15)),
                 ),
               ),
             ],
@@ -349,29 +350,30 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
 
   @override
   Widget build(BuildContext context) {
+    final c = AppTheme.of(context);
     return Scaffold(
-      backgroundColor: AppTheme.crust,
+      backgroundColor: c.crust,
       appBar: AppBar(
-        backgroundColor: AppTheme.base,
+        backgroundColor: c.base,
         title: Row(
           children: [
-            const Icon(Icons.cleaning_services_rounded,
-                color: AppTheme.green, size: 24),
+            Icon(Icons.cleaning_services_rounded,
+                color: c.green, size: 24),
             const SizedBox(width: 10),
             Text('CleanIT',
                 style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.w800, color: Colors.white)),
+                    fontWeight: FontWeight.w800, color: c.text)),
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: AppTheme.surface0,
+                color: c.surface0,
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text('Cleaner',
                   style: GoogleFonts.outfit(
                       fontSize: 11,
-                      color: AppTheme.subtext0,
+                      color: c.subtext0,
                       fontWeight: FontWeight.w600)),
             ),
           ],
@@ -385,7 +387,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
                   mode == ThemeMode.dark
                       ? Icons.light_mode_rounded
                       : Icons.dark_mode_rounded,
-                  color: AppTheme.overlay0,
+                  color: c.overlay0,
                 ),
                 tooltip: 'Toggle theme',
                 onPressed: () {
@@ -398,59 +400,59 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
             },
           ),
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppTheme.text),
+            icon: Icon(Icons.refresh_rounded, color: c.text),
             onPressed: _loadData,
           ),
           IconButton(
-            icon: const Icon(Icons.logout_rounded, color: AppTheme.overlay0),
+            icon: Icon(Icons.logout_rounded, color: c.overlay0),
             onPressed: _signOut,
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppTheme.green))
+          ? Center(
+              child: CircularProgressIndicator(color: c.green))
           : RefreshIndicator(
               onRefresh: _loadData,
-              color: AppTheme.green,
+              color: c.green,
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
                 children: [
                   // ── On Duty Toggle ──
-                  _buildOnDutyToggle(),
+                  _buildOnDutyToggle(c),
                   const SizedBox(height: 24),
 
                   // ── My Active Jobs ──
                   if (_myJobs.isNotEmpty) ...[
-                    _buildSectionTitle('My Active Jobs'),
+                    _buildSectionTitle('My Active Jobs', c),
                     const SizedBox(height: 14),
-                    ..._myJobs.map(_buildActiveJobCard),
+                    ..._myJobs.map((r) => _buildActiveJobCard(r, c)),
                     const SizedBox(height: 24),
                   ],
 
                   // ── Open Requests (Live Radar) ──
-                  _buildSectionTitle('Open Requests'),
+                  _buildSectionTitle('Open Requests', c),
                   const SizedBox(height: 14),
                   if (_openRequests.isEmpty)
-                    _buildEmptyRadar()
+                    _buildEmptyRadar(c)
                   else
-                    ..._openRequests.map(_buildOpenRequestCard),
+                    ..._openRequests.map((r) => _buildOpenRequestCard(r, c)),
                 ],
               ),
             ),
     );
   }
 
-  Widget _buildOnDutyToggle() {
+  Widget _buildOnDutyToggle(ThemeColors c) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
         color: _isOnDuty
-            ? AppTheme.green.withValues(alpha: 0.1)
-            : AppTheme.base,
+            ? c.green.withValues(alpha: 0.1)
+            : c.base,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: _isOnDuty ? AppTheme.green.withValues(alpha: 0.3) : AppTheme.surface0,
+          color: _isOnDuty ? c.green.withValues(alpha: 0.3) : c.surface0,
         ),
       ),
       child: Row(
@@ -460,11 +462,11 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
             height: 10,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: _isOnDuty ? AppTheme.green : AppTheme.overlay0,
+              color: _isOnDuty ? c.green : c.overlay0,
               boxShadow: _isOnDuty
                   ? [
                       BoxShadow(
-                          color: AppTheme.green.withValues(alpha: 0.5),
+                          color: c.green.withValues(alpha: 0.5),
                           blurRadius: 8)
                     ]
                   : null,
@@ -480,7 +482,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: _isOnDuty ? AppTheme.green : AppTheme.overlay0,
+                    color: _isOnDuty ? c.green : c.overlay0,
                   ),
                 ),
                 Text(
@@ -489,7 +491,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
                       : 'Not receiving requests',
                   style: TextStyle(
                       fontSize: 12,
-                      color: AppTheme.overlay0.withValues(alpha: 0.8)),
+                      color: c.overlay0.withValues(alpha: 0.8)),
                 ),
               ],
             ),
@@ -499,30 +501,30 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
             onChanged: _toggleOnDuty,
             thumbColor: WidgetStateProperty.resolveWith<Color>((states) {
               if (states.contains(WidgetState.selected)) {
-                return AppTheme.green;
+                return c.green;
               }
               return Colors.grey;
             }),
-            activeTrackColor: AppTheme.green.withValues(alpha: 0.3),
+            activeTrackColor: c.green.withValues(alpha: 0.3),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, ThemeColors c) {
     return Text(
       title.toUpperCase(),
       style: GoogleFonts.outfit(
         fontSize: 13,
         fontWeight: FontWeight.w600,
-        color: AppTheme.overlay0,
+        color: c.overlay0,
         letterSpacing: 1.1,
       ),
     );
   }
 
-  Widget _buildActiveJobCard(CleaningRequest r) {
+  Widget _buildActiveJobCard(CleaningRequest r, ThemeColors c) {
     return GestureDetector(
       onTap: () => _navigateToJobDetails(r),
       child: Container(
@@ -531,12 +533,12 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              AppTheme.green.withValues(alpha: 0.1),
-              AppTheme.teal.withValues(alpha: 0.05),
+              c.green.withValues(alpha: 0.1),
+              c.teal.withValues(alpha: 0.05),
             ],
           ),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.green.withValues(alpha: 0.25)),
+          border: Border.all(color: c.green.withValues(alpha: 0.25)),
         ),
         child: Row(
           children: [
@@ -545,10 +547,10 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
               height: 44,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppTheme.green.withValues(alpha: 0.15),
+                color: c.green.withValues(alpha: 0.15),
               ),
-              child: const Icon(Icons.meeting_room_rounded,
-                  color: AppTheme.green, size: 22),
+              child: Icon(Icons.meeting_room_rounded,
+                  color: c.green, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -559,11 +561,11 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
                       style: GoogleFonts.outfit(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: Colors.white)),
+                          color: c.text)),
                   const SizedBox(height: 3),
                   Text(r.tasksSummary,
-                      style: const TextStyle(
-                          color: AppTheme.subtext0, fontSize: 13)),
+                      style: TextStyle(
+                          color: c.subtext0, fontSize: 13)),
                 ],
               ),
             ),
@@ -571,14 +573,14 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
                 color: r.status == RequestStatus.inProgress
-                    ? AppTheme.peach
-                    : AppTheme.teal,
+                    ? c.peach
+                    : c.teal,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 r.status.displayLabel,
-                style: const TextStyle(
-                    color: AppTheme.crust,
+                style: TextStyle(
+                    color: c.crust,
                     fontSize: 11,
                     fontWeight: FontWeight.w700),
               ),
@@ -589,19 +591,19 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
     );
   }
 
-  Widget _buildOpenRequestCard(CleaningRequest r) {
+  Widget _buildOpenRequestCard(CleaningRequest r, ThemeColors c) {
     final isAccepting = _acceptingRequestId == r.id;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppTheme.base,
+        color: c.base,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: r.isUrgent
-              ? AppTheme.red.withValues(alpha: 0.4)
-              : AppTheme.surface0,
+              ? c.red.withValues(alpha: 0.4)
+              : c.surface0,
           width: r.isUrgent ? 2 : 1,
         ),
       ),
@@ -615,14 +617,14 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
                   style: GoogleFonts.outfit(
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white)),
+                      color: c.text)),
               const Spacer(),
               if (r.isUrgent)
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppTheme.red,
+                    color: c.red,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: const Text('URGENT',
@@ -635,13 +637,13 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
           ),
           const SizedBox(height: 6),
           Text(r.tasksSummary,
-              style: const TextStyle(color: AppTheme.teal, fontSize: 14)),
+              style: TextStyle(color: c.teal, fontSize: 14)),
           if (r.notes != null && r.notes!.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(r.notes!,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: AppTheme.subtext0, fontSize: 13)),
+                style: TextStyle(color: c.subtext0, fontSize: 13)),
           ],
           const SizedBox(height: 14),
 
@@ -652,18 +654,18 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
             child: ElevatedButton.icon(
               onPressed: isAccepting ? null : () => _acceptRequest(r),
               icon: isAccepting
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: AppTheme.crust))
+                          strokeWidth: 2, color: c.crust))
                   : const Icon(Icons.check_rounded, size: 20),
               label: Text(isAccepting ? 'Accepting...' : 'Accept',
                   style: GoogleFonts.outfit(
                       fontSize: 15, fontWeight: FontWeight.w700)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.green,
-                foregroundColor: AppTheme.crust,
+                backgroundColor: c.green,
+                foregroundColor: c.crust,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
@@ -674,7 +676,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
     );
   }
 
-  Widget _buildEmptyRadar() {
+  Widget _buildEmptyRadar(ThemeColors c) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 48),
       child: Column(
@@ -689,7 +691,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppTheme.green
+                    color: c.green
                         .withValues(alpha: 1.0 - _radarController.value),
                     width: 2,
                   ),
@@ -700,10 +702,10 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
                     height: 40,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppTheme.green.withValues(alpha: 0.1),
+                      color: c.green.withValues(alpha: 0.1),
                     ),
                     child:
-                        const Icon(Icons.radar, color: AppTheme.green, size: 24),
+                        Icon(Icons.radar, color: c.green, size: 24),
                   ),
                 ),
               );
@@ -711,10 +713,10 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
           ),
           const SizedBox(height: 16),
           Text('Scanning for requests...',
-              style: GoogleFonts.outfit(color: AppTheme.overlay0, fontSize: 15)),
+              style: GoogleFonts.outfit(color: c.overlay0, fontSize: 15)),
           const SizedBox(height: 4),
-          const Text('New requests will pop up here',
-              style: TextStyle(color: AppTheme.surface1, fontSize: 13)),
+          Text('New requests will pop up here',
+              style: TextStyle(color: c.surface1, fontSize: 13)),
         ],
       ),
     );

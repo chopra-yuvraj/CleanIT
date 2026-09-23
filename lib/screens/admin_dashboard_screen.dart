@@ -92,10 +92,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
   @override
   Widget build(BuildContext context) {
+    final c = AppTheme.of(context);
     return Scaffold(
-      backgroundColor: AppTheme.crust,
+      backgroundColor: c.crust,
       appBar: AppBar(
-        backgroundColor: AppTheme.base,
+        backgroundColor: c.base,
         title: Row(
           children: [
             Container(
@@ -103,9 +104,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               height: 36,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppTheme.mauve.withValues(alpha: 0.15),
+                color: c.mauve.withValues(alpha: 0.15),
               ),
-              child: const Icon(Icons.analytics_rounded, color: AppTheme.mauve, size: 20),
+              child: Icon(Icons.analytics_rounded, color: c.mauve, size: 20),
             ),
             const SizedBox(width: 12),
             Text(
@@ -113,34 +114,46 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               style: GoogleFonts.outfit(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: Colors.white,
+                color: c.text,
               ),
             ),
           ],
         ),
         actions: [
-          IconButton(
-            onPressed: () {
-              themeNotifier.value = themeNotifier.value == ThemeMode.dark
-                  ? ThemeMode.light
-                  : ThemeMode.dark;
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: themeNotifier,
+            builder: (context, mode, _) {
+              return IconButton(
+                icon: Icon(
+                  mode == ThemeMode.dark
+                      ? Icons.light_mode_rounded
+                      : Icons.dark_mode_rounded,
+                  color: c.subtext0,
+                ),
+                tooltip: 'Toggle theme',
+                onPressed: () {
+                  themeNotifier.value =
+                      themeNotifier.value == ThemeMode.dark
+                          ? ThemeMode.light
+                          : ThemeMode.dark;
+                },
+              );
             },
-            icon: const Icon(Icons.brightness_6_rounded, color: AppTheme.subtext0),
           ),
           IconButton(
             onPressed: _loadAllData,
-            icon: const Icon(Icons.refresh_rounded, color: AppTheme.subtext0),
+            icon: Icon(Icons.refresh_rounded, color: c.subtext0),
           ),
           IconButton(
             onPressed: _signOut,
-            icon: const Icon(Icons.logout_rounded, color: AppTheme.subtext0),
+            icon: Icon(Icons.logout_rounded, color: c.subtext0),
           ),
         ],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: AppTheme.mauve,
-          labelColor: AppTheme.mauve,
-          unselectedLabelColor: AppTheme.overlay0,
+          indicatorColor: c.mauve,
+          labelColor: c.mauve,
+          unselectedLabelColor: c.overlay0,
           labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 13),
           tabs: const [
             Tab(text: 'Overview', icon: Icon(Icons.dashboard_rounded, size: 18)),
@@ -151,14 +164,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.mauve))
+          ? Center(child: CircularProgressIndicator(color: c.mauve))
           : TabBarView(
               controller: _tabController,
               children: [
-                _buildOverviewTab(),
-                _buildBlocksTab(),
-                _buildCleanersTab(),
-                _buildAuditTab(),
+                _buildOverviewTab(c),
+                _buildBlocksTab(c),
+                _buildCleanersTab(c),
+                _buildAuditTab(c),
               ],
             ),
     );
@@ -167,18 +180,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   // ─────────────────────────────────────────────────────────
   //  Overview Tab
   // ─────────────────────────────────────────────────────────
-  Widget _buildOverviewTab() {
+  Widget _buildOverviewTab(ThemeColors c) {
     final o = _overview;
-    if (o == null) return const Center(child: Text('No data', style: TextStyle(color: AppTheme.subtext0)));
+    if (o == null) return Center(child: Text('No data', style: TextStyle(color: c.subtext0)));
 
     return RefreshIndicator(
       onRefresh: _loadAllData,
-      color: AppTheme.mauve,
+      color: c.mauve,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           // ── Stat Cards Grid ──
-          _sectionTitle('📊 Overview Statistics', 'Powered by MongoDB Aggregation Pipeline'),
+          _sectionTitle('📊 Overview Statistics', 'Powered by MongoDB Aggregation Pipeline', c),
           const SizedBox(height: 12),
           GridView.count(
             crossAxisCount: 2,
@@ -188,31 +201,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             mainAxisSpacing: 12,
             childAspectRatio: 1.5,
             children: [
-              _statCard('Total Requests', '${o.totalRequests}', Icons.cleaning_services_rounded, AppTheme.blue),
-              _statCard('Completed', '${o.completedRequests}', Icons.check_circle_rounded, AppTheme.green),
-              _statCard('Active', '${o.activeRequests}', Icons.pending_rounded, AppTheme.peach),
-              _statCard('Cancelled', '${o.cancelledRequests}', Icons.cancel_rounded, AppTheme.red),
-              _statCard('Completion Rate', '${o.completionRate.toStringAsFixed(1)}%', Icons.trending_up_rounded, AppTheme.mauve),
-              _statCard('Avg Time', '${o.avgCompletionMinutes.toStringAsFixed(0)} min', Icons.timer_rounded, AppTheme.yellow),
-              _statCard('Students', '${o.totalStudents}', Icons.school_rounded, AppTheme.blue),
-              _statCard('Cleaners', '${o.totalCleaners}', Icons.people_rounded, AppTheme.teal),
+              _statCard('Total Requests', '${o.totalRequests}', Icons.cleaning_services_rounded, c.blue, c),
+              _statCard('Completed', '${o.completedRequests}', Icons.check_circle_rounded, c.green, c),
+              _statCard('Active', '${o.activeRequests}', Icons.pending_rounded, c.peach, c),
+              _statCard('Cancelled', '${o.cancelledRequests}', Icons.cancel_rounded, c.red, c),
+              _statCard('Completion Rate', '${o.completionRate.toStringAsFixed(1)}%', Icons.trending_up_rounded, c.mauve, c),
+              _statCard('Avg Time', '${o.avgCompletionMinutes.toStringAsFixed(0)} min', Icons.timer_rounded, c.yellow, c),
+              _statCard('Students', '${o.totalStudents}', Icons.school_rounded, c.blue, c),
+              _statCard('Cleaners', '${o.totalCleaners}', Icons.people_rounded, c.teal, c),
             ],
           ),
           const SizedBox(height: 24),
 
           // ── Status Distribution ──
-          _sectionTitle('📈 Status Distribution', '\$group aggregation'),
+          _sectionTitle('📈 Status Distribution', '\$group aggregation', c),
           const SizedBox(height: 12),
-          ..._statusDist.map((s) => _statusBar(s)),
+          ..._statusDist.map((s) => _statusBar(s, c)),
           const SizedBox(height: 24),
 
           // ── Peak Hours ──
-          _sectionTitle('🕐 Peak Hours', '\$project + \$group by hour'),
+          _sectionTitle('🕐 Peak Hours', '\$project + \$group by hour', c),
           const SizedBox(height: 12),
           SizedBox(
             height: 160,
             child: _peakHours.isEmpty
-                ? const Center(child: Text('No data yet', style: TextStyle(color: AppTheme.subtext0)))
+                ? Center(child: Text('No data yet', style: TextStyle(color: c.subtext0)))
                 : Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: _peakHours.map((h) {
@@ -224,17 +237,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              Text('${h.count}', style: TextStyle(color: AppTheme.subtext0, fontSize: 10)),
+                              Text('${h.count}', style: TextStyle(color: c.subtext0, fontSize: 10)),
                               const SizedBox(height: 4),
                               Container(
                                 height: height,
                                 decoration: BoxDecoration(
-                                  color: AppTheme.mauve.withValues(alpha: 0.7),
+                                  color: c.mauve.withValues(alpha: 0.7),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              Text('${h.hour}', style: TextStyle(color: AppTheme.overlay0, fontSize: 9)),
+                              Text('${h.hour}', style: TextStyle(color: c.overlay0, fontSize: 9)),
                             ],
                           ),
                         ),
@@ -250,21 +263,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   // ─────────────────────────────────────────────────────────
   //  Blocks Tab
   // ─────────────────────────────────────────────────────────
-  Widget _buildBlocksTab() {
+  Widget _buildBlocksTab(ThemeColors c) {
     return RefreshIndicator(
       onRefresh: _loadAllData,
-      color: AppTheme.mauve,
+      color: c.mauve,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _sectionTitle('🏢 Requests by Hostel Block', '\$group by studentBlock'),
+          _sectionTitle('🏢 Requests by Hostel Block', '\$group by studentBlock', c),
           const SizedBox(height: 12),
           if (_blockStats.isEmpty)
-            const Center(child: Padding(
-              padding: EdgeInsets.all(40),
-              child: Text('No block data yet', style: TextStyle(color: AppTheme.subtext0)),
+            Center(child: Padding(
+              padding: const EdgeInsets.all(40),
+              child: Text('No block data yet', style: TextStyle(color: c.subtext0)),
             )),
-          ..._blockStats.map((b) => _blockCard(b)),
+          ..._blockStats.map((b) => _blockCard(b, c)),
         ],
       ),
     );
@@ -273,21 +286,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   // ─────────────────────────────────────────────────────────
   //  Cleaners Tab (Leaderboard)
   // ─────────────────────────────────────────────────────────
-  Widget _buildCleanersTab() {
+  Widget _buildCleanersTab(ThemeColors c) {
     return RefreshIndicator(
       onRefresh: _loadAllData,
-      color: AppTheme.mauve,
+      color: c.mauve,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _sectionTitle('🏆 Cleaner Leaderboard', '\$lookup + \$group + \$sort pipeline'),
+          _sectionTitle('🏆 Cleaner Leaderboard', '\$lookup + \$group + \$sort pipeline', c),
           const SizedBox(height: 12),
           if (_leaderboard.isEmpty)
-            const Center(child: Padding(
-              padding: EdgeInsets.all(40),
-              child: Text('No completed jobs yet', style: TextStyle(color: AppTheme.subtext0)),
+            Center(child: Padding(
+              padding: const EdgeInsets.all(40),
+              child: Text('No completed jobs yet', style: TextStyle(color: c.subtext0)),
             )),
-          ..._leaderboard.asMap().entries.map((e) => _leaderboardTile(e.key, e.value)),
+          ..._leaderboard.asMap().entries.map((e) => _leaderboardTile(e.key, e.value, c)),
         ],
       ),
     );
@@ -296,21 +309,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   // ─────────────────────────────────────────────────────────
   //  Audit Log Tab
   // ─────────────────────────────────────────────────────────
-  Widget _buildAuditTab() {
+  Widget _buildAuditTab(ThemeColors c) {
     return RefreshIndicator(
       onRefresh: _loadAllData,
-      color: AppTheme.mauve,
+      color: c.mauve,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _sectionTitle('📋 Audit Trail', 'TTL-indexed collection (auto-expires in 90 days)'),
+          _sectionTitle('📋 Audit Trail', 'TTL-indexed collection (auto-expires in 90 days)', c),
           const SizedBox(height: 12),
           if (_auditLogs.isEmpty)
-            const Center(child: Padding(
-              padding: EdgeInsets.all(40),
-              child: Text('No audit logs yet', style: TextStyle(color: AppTheme.subtext0)),
+            Center(child: Padding(
+              padding: const EdgeInsets.all(40),
+              child: Text('No audit logs yet', style: TextStyle(color: c.subtext0)),
             )),
-          ..._auditLogs.map((log) => _auditLogTile(log)),
+          ..._auditLogs.map((log) => _auditLogTile(log, c)),
         ],
       ),
     );
@@ -320,22 +333,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   //  Widget Helpers
   // ─────────────────────────────────────────────────────────
 
-  Widget _sectionTitle(String title, String subtitle) {
+  Widget _sectionTitle(String title, String subtitle, ThemeColors c) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
+        Text(title, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: c.text)),
         const SizedBox(height: 4),
-        Text(subtitle, style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.overlay0, fontStyle: FontStyle.italic)),
+        Text(subtitle, style: GoogleFonts.outfit(fontSize: 12, color: c.overlay0, fontStyle: FontStyle.italic)),
       ],
     );
   }
 
-  Widget _statCard(String label, String value, IconData icon, Color color) {
+  Widget _statCard(String label, String value, IconData icon, Color color, ThemeColors c) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.base,
+        color: c.base,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
@@ -345,26 +358,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         children: [
           Icon(icon, color: color, size: 24),
           const SizedBox(height: 8),
-          Text(value, style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white)),
-          Text(label, style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.subtext0)),
+          Text(value, style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w800, color: c.text)),
+          Text(label, style: GoogleFonts.outfit(fontSize: 12, color: c.subtext0)),
         ],
       ),
     );
   }
 
-  Widget _statusBar(StatusStat stat) {
+  Widget _statusBar(StatusStat stat, ThemeColors c) {
     final total = _statusDist.fold<int>(0, (s, e) => s + e.count);
     final pct = total > 0 ? stat.count / total : 0.0;
-    final color = _statusColor(stat.status);
+    final color = _statusColor(stat.status, c);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppTheme.base,
+          color: c.base,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.surface0),
+          border: Border.all(color: c.surface0),
         ),
         child: Row(
           children: [
@@ -377,13 +390,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(stat.status, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                  Text(stat.status, style: TextStyle(color: c.text, fontWeight: FontWeight.w600, fontSize: 13)),
                   const SizedBox(height: 6),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: pct,
-                      backgroundColor: AppTheme.surface0,
+                      backgroundColor: c.surface0,
                       valueColor: AlwaysStoppedAnimation(color),
                       minHeight: 6,
                     ),
@@ -399,27 +412,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     );
   }
 
-  Widget _blockCard(BlockStat stat) {
+  Widget _blockCard(BlockStat stat, ThemeColors c) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.base,
+        color: c.base,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.surface0),
+        border: Border.all(color: c.surface0),
       ),
       child: Row(
         children: [
           Container(
             width: 48, height: 48,
             decoration: BoxDecoration(
-              color: AppTheme.blue.withValues(alpha: 0.15),
+              color: c.blue.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
               child: Text(
                 stat.block,
-                style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: AppTheme.blue),
+                style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: c.blue),
               ),
             ),
           ),
@@ -428,25 +441,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Block ${stat.block}', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
+                Text('Block ${stat.block}', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: c.text)),
                 const SizedBox(height: 4),
                 Text(
                   '${stat.totalRequests} total · ${stat.completedRequests} completed · ${stat.urgentRequests} urgent',
-                  style: TextStyle(color: AppTheme.subtext0, fontSize: 12),
+                  style: TextStyle(color: c.subtext0, fontSize: 12),
                 ),
               ],
             ),
           ),
           Text(
             '${stat.totalRequests}',
-            style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w800, color: AppTheme.blue),
+            style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w800, color: c.blue),
           ),
         ],
       ),
     );
   }
 
-  Widget _leaderboardTile(int index, LeaderboardEntry entry) {
+  Widget _leaderboardTile(int index, LeaderboardEntry entry, ThemeColors c) {
     final medals = ['🥇', '🥈', '🥉'];
     final medal = index < 3 ? medals[index] : '${index + 1}';
 
@@ -454,10 +467,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.base,
+        color: c.base,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: index == 0 ? AppTheme.yellow.withValues(alpha: 0.5) : AppTheme.surface0,
+          color: index == 0 ? c.yellow.withValues(alpha: 0.5) : c.surface0,
         ),
       ),
       child: Row(
@@ -468,11 +481,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(entry.cleanerName, style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+                Text(entry.cleanerName, style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: c.text)),
                 const SizedBox(height: 2),
                 Text(
                   '${entry.completedJobs} jobs · avg ${entry.avgCompletionMinutes.toStringAsFixed(0)} min',
-                  style: TextStyle(color: AppTheme.subtext0, fontSize: 12),
+                  style: TextStyle(color: c.subtext0, fontSize: 12),
                 ),
               ],
             ),
@@ -480,12 +493,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: AppTheme.green.withValues(alpha: 0.15),
+              color: c.green.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               '${entry.completedJobs}',
-              style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.green),
+              style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700, color: c.green),
             ),
           ),
         ],
@@ -493,20 +506,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     );
   }
 
-  Widget _auditLogTile(AuditLogEntry log) {
+  Widget _auditLogTile(AuditLogEntry log, ThemeColors c) {
     final actionColor = log.action == 'CREATE'
-        ? AppTheme.green
+        ? c.green
         : log.action == 'UPDATE'
-            ? AppTheme.blue
-            : AppTheme.red;
+            ? c.blue
+            : c.red;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppTheme.base,
+        color: c.base,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.surface0),
+        border: Border.all(color: c.surface0),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -525,22 +538,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppTheme.surface0,
+                  color: c.surface0,
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Text(log.collection, style: TextStyle(color: AppTheme.subtext0, fontSize: 11)),
+                child: Text(log.collection, style: TextStyle(color: c.subtext0, fontSize: 11)),
               ),
               const Spacer(),
               Text(
                 _formatTimestamp(log.timestamp),
-                style: TextStyle(color: AppTheme.overlay0, fontSize: 11),
+                style: TextStyle(color: c.overlay0, fontSize: 11),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(log.summary, style: TextStyle(color: Colors.white, fontSize: 13)),
+          Text(log.summary, style: TextStyle(color: c.text, fontSize: 13)),
           const SizedBox(height: 4),
-          Text('by ${log.performedByName}', style: TextStyle(color: AppTheme.overlay0, fontSize: 11)),
+          Text('by ${log.performedByName}', style: TextStyle(color: c.overlay0, fontSize: 11)),
         ],
       ),
     );
@@ -554,14 +567,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     return '${diff.inDays}d ago';
   }
 
-  Color _statusColor(String status) {
+  Color _statusColor(String status, ThemeColors c) {
     switch (status) {
-      case 'OPEN': return AppTheme.blue;
-      case 'ASSIGNED': return AppTheme.peach;
-      case 'IN_PROGRESS': return AppTheme.yellow;
-      case 'COMPLETED': return AppTheme.green;
-      case 'CANCELLED_ROOM_LOCKED': return AppTheme.red;
-      default: return AppTheme.overlay0;
+      case 'OPEN': return c.blue;
+      case 'ASSIGNED': return c.peach;
+      case 'IN_PROGRESS': return c.yellow;
+      case 'COMPLETED': return c.green;
+      case 'CANCELLED_ROOM_LOCKED': return c.red;
+      default: return c.overlay0;
     }
   }
 }

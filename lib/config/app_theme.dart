@@ -6,8 +6,93 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+/// Context-aware color set — returned by [AppTheme.of].
+/// Use this for all surface/text/border colors so they respond to theme changes.
+class ThemeColors {
+  const ThemeColors({
+    required this.crust,
+    required this.base,
+    required this.mantle,
+    required this.surface0,
+    required this.surface1,
+    required this.overlay0,
+    required this.subtext0,
+    required this.text,
+    required this.blue,
+    required this.green,
+    required this.red,
+    required this.peach,
+    required this.yellow,
+    required this.mauve,
+    required this.teal,
+    required this.pink,
+  });
+
+  final Color crust;
+  final Color base;
+  final Color mantle;
+  final Color surface0;
+  final Color surface1;
+  final Color overlay0;
+  final Color subtext0;
+  final Color text;
+  // Accent colors (adjusted per theme for legibility)
+  final Color blue;
+  final Color green;
+  final Color red;
+  final Color peach;
+  final Color yellow;
+  final Color mauve;
+  final Color teal;
+  final Color pink;
+}
+
 class AppTheme {
   AppTheme._();
+
+  /// Returns the correct [ThemeColors] for the current [BuildContext] brightness.
+  static ThemeColors of(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? _dark : _light;
+  }
+
+  static const ThemeColors _dark = ThemeColors(
+    crust:    Color(0xFF11111B),
+    base:     Color(0xFF1E1E2E),
+    mantle:   Color(0xFF181825),
+    surface0: Color(0xFF313244),
+    surface1: Color(0xFF45475A),
+    overlay0: Color(0xFF6C7086),
+    subtext0: Color(0xFFA6ADC8),
+    text:     Color(0xFFCDD6F4),
+    blue:     Color(0xFF89B4FA),
+    green:    Color(0xFFA6E3A1),
+    red:      Color(0xFFFF6B6B),
+    peach:    Color(0xFFFAB387),
+    yellow:   Color(0xFFF9E2AF),
+    mauve:    Color(0xFFCBA6F7),
+    teal:     Color(0xFF89DCEB),
+    pink:     Color(0xFFF5C2E7),
+  );
+
+  static const ThemeColors _light = ThemeColors(
+    crust:    Color(0xFFDCE0E8),
+    base:     Color(0xFFEFF1F5),
+    mantle:   Color(0xFFE6E9EF),
+    surface0: Color(0xFFCCD0DA),
+    surface1: Color(0xFFBCC0CC),
+    overlay0: Color(0xFF9CA0B0),
+    subtext0: Color(0xFF6C6F85),
+    text:     Color(0xFF4C4F69),
+    blue:     Color(0xFF1E66F5),
+    green:    Color(0xFF40A02B),
+    red:      Color(0xFFD20F39),
+    peach:    Color(0xFFFE640B),
+    yellow:   Color(0xFFDF8E1D),
+    mauve:    Color(0xFF8839EF),
+    teal:     Color(0xFF179299),
+    pink:     Color(0xFFEA76CB),
+  );
 
   // ── Accent Colors (shared between themes) ──
   static const Color blue     = Color(0xFF89B4FA);

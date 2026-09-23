@@ -157,8 +157,8 @@ class _AuthGateState extends State<_AuthGate> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
+      final primary = Theme.of(context).colorScheme.primary;
       return Scaffold(
-        backgroundColor: AppTheme.crust,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -168,11 +168,11 @@ class _AuthGateState extends State<_AuthGate> {
                 height: 72,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppTheme.blue.withValues(alpha: 0.1),
+                  color: primary.withValues(alpha: 0.1),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.cleaning_services_rounded,
-                  color: AppTheme.blue,
+                  color: primary,
                   size: 36,
                 ),
               ),
@@ -181,16 +181,15 @@ class _AuthGateState extends State<_AuthGate> {
                 'CleanIT',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.w800,
-                      color: Colors.white,
                     ),
               ),
               const SizedBox(height: 24),
-              const SizedBox(
+              SizedBox(
                 width: 28,
                 height: 28,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  color: AppTheme.blue,
+                  color: primary,
                 ),
               ),
             ],

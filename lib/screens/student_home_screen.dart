@@ -131,18 +131,18 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppTheme.of(context);
     return Scaffold(
-      backgroundColor: AppTheme.crust,
+      backgroundColor: c.crust,
       appBar: AppBar(
-        backgroundColor: AppTheme.base,
+        backgroundColor: c.base,
         title: Row(
           children: [
-            const Icon(Icons.cleaning_services_rounded,
-                color: AppTheme.blue, size: 24),
+            Icon(Icons.cleaning_services_rounded, color: c.blue, size: 24),
             const SizedBox(width: 10),
             Text('CleanIT',
                 style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.w800, color: Colors.white)),
+                    fontWeight: FontWeight.w800, color: c.text)),
           ],
         ),
         actions: [
@@ -154,7 +154,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                   mode == ThemeMode.dark
                       ? Icons.light_mode_rounded
                       : Icons.dark_mode_rounded,
-                  color: AppTheme.overlay0,
+                  color: c.overlay0,
                 ),
                 tooltip: 'Toggle theme',
                 onPressed: () {
@@ -167,61 +167,61 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppTheme.text),
+            icon: Icon(Icons.refresh_rounded, color: c.text),
             onPressed: _loadData,
           ),
           IconButton(
-            icon: const Icon(Icons.logout_rounded, color: AppTheme.overlay0),
+            icon: Icon(Icons.logout_rounded, color: c.overlay0),
             onPressed: _signOut,
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppTheme.blue))
+          ? Center(
+              child: CircularProgressIndicator(color: c.blue))
           : RefreshIndicator(
               onRefresh: _loadData,
-              color: AppTheme.blue,
+              color: c.blue,
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
                 children: [
                   // ── Greeting ──
-                  _buildGreeting(),
+                  _buildGreeting(c),
                   const SizedBox(height: 20),
 
                   // ── Alert Banner (last cancelled request) ──
                   if (_lastCancelledRequest != null) ...[
-                    _buildAlertBanner(),
+                    _buildAlertBanner(c),
                     const SizedBox(height: 20),
                   ],
 
                   // ── Active Request Card ──
                   if (_activeRequest != null) ...[
-                    _buildActiveRequestCard(),
+                    _buildActiveRequestCard(c),
                     const SizedBox(height: 24),
                   ],
 
                   // ── Hero Button ──
-                  _buildHeroButton(),
+                  _buildHeroButton(c),
                   const SizedBox(height: 32),
 
                   // ── Recent History ──
-                  _buildSectionTitle('Recent History'),
+                  _buildSectionTitle('Recent History', c),
                   const SizedBox(height: 14),
                   if (_history.isEmpty)
-                    _buildEmptyState()
+                    _buildEmptyState(c)
                   else
                     ..._history
                         .where((r) => !r.status.isActive)
                         .take(10)
-                        .map(_buildHistoryCard),
+                        .map((r) => _buildHistoryCard(r, c)),
                 ],
               ),
             ),
     );
   }
 
-  Widget _buildGreeting() {
+  Widget _buildGreeting(ThemeColors c) {
     final hour = DateTime.now().hour;
     final greeting = hour < 12
         ? 'Good morning'
@@ -236,7 +236,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           greeting,
           style: GoogleFonts.outfit(
             fontSize: 15,
-            color: AppTheme.overlay0,
+            color: c.overlay0,
           ),
         ),
         const SizedBox(height: 4),
@@ -245,7 +245,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           style: GoogleFonts.outfit(
             fontSize: 26,
             fontWeight: FontWeight.w800,
-            color: Colors.white,
+            color: c.text,
           ),
         ),
         if (_profile?.roomLabel != null)
@@ -253,25 +253,25 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             'Room ${_profile!.roomLabel}',
             style: GoogleFonts.outfit(
               fontSize: 14,
-              color: AppTheme.subtext0,
+              color: c.subtext0,
             ),
           ),
       ],
     );
   }
 
-  Widget _buildAlertBanner() {
+  Widget _buildAlertBanner(ThemeColors c) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppTheme.red.withValues(alpha: 0.15),
-            AppTheme.red.withValues(alpha: 0.05),
+            c.red.withValues(alpha: 0.15),
+            c.red.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.red.withValues(alpha: 0.3)),
+        border: Border.all(color: c.red.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -280,10 +280,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             height: 40,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppTheme.red.withValues(alpha: 0.2),
+              color: c.red.withValues(alpha: 0.2),
             ),
-            child: const Icon(Icons.warning_amber_rounded,
-                color: AppTheme.red, size: 22),
+            child: Icon(Icons.warning_amber_rounded,
+                color: c.red, size: 22),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -295,7 +295,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                   style: GoogleFonts.outfit(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: AppTheme.red,
+                    color: c.red,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -303,7 +303,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                   'Your cleaner arrived, but your room was locked.',
                   style: GoogleFonts.outfit(
                     fontSize: 13,
-                    color: AppTheme.text.withValues(alpha: 0.8),
+                    color: c.text.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -314,7 +314,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     );
   }
 
-  Widget _buildActiveRequestCard() {
+  Widget _buildActiveRequestCard(ThemeColors c) {
     final r = _activeRequest!;
     return GestureDetector(
       onTap: _navigateToActiveJob,
@@ -325,12 +325,12 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppTheme.blue.withValues(alpha: 0.15),
-              AppTheme.mauve.withValues(alpha: 0.1),
+              c.blue.withValues(alpha: 0.15),
+              c.mauve.withValues(alpha: 0.1),
             ],
           ),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.blue.withValues(alpha: 0.3)),
+          border: Border.all(color: c.blue.withValues(alpha: 0.3)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -341,7 +341,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _statusColor(r.status),
+                    color: _statusColor(r.status, c),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -349,12 +349,12 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                     style: GoogleFonts.outfit(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: AppTheme.crust),
+                        color: c.crust),
                   ),
                 ),
                 const Spacer(),
-                const Icon(Icons.arrow_forward_ios_rounded,
-                    color: AppTheme.overlay0, size: 16),
+                Icon(Icons.arrow_forward_ios_rounded,
+                    color: c.overlay0, size: 16),
               ],
             ),
             const SizedBox(height: 14),
@@ -363,23 +363,23 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               style: GoogleFonts.outfit(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: Colors.white,
+                color: c.text,
               ),
             ),
             const SizedBox(height: 6),
             Text(
               r.tasksSummary,
-              style: const TextStyle(color: AppTheme.subtext0, fontSize: 14),
+              style: TextStyle(color: c.subtext0, fontSize: 14),
             ),
             if (r.cleanerName != null) ...[
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Icon(Icons.person, color: AppTheme.green, size: 16),
+                  Icon(Icons.person, color: c.green, size: 16),
                   const SizedBox(width: 6),
                   Text(
                     'Cleaner: ${r.cleanerName}',
-                    style: const TextStyle(color: AppTheme.green, fontSize: 13),
+                    style: TextStyle(color: c.green, fontSize: 13),
                   ),
                 ],
               ),
@@ -390,7 +390,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     );
   }
 
-  Widget _buildHeroButton() {
+  Widget _buildHeroButton(ThemeColors c) {
     final hasActive = _activeRequest != null;
     return GestureDetector(
       onTap: hasActive ? _navigateToActiveJob : _navigateToNewRequest,
@@ -402,19 +402,19 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             end: Alignment.bottomRight,
             colors: hasActive
                 ? [
-                    AppTheme.green.withValues(alpha: 0.2),
-                    AppTheme.teal.withValues(alpha: 0.1),
+                    c.green.withValues(alpha: 0.2),
+                    c.teal.withValues(alpha: 0.1),
                   ]
                 : [
-                    AppTheme.blue.withValues(alpha: 0.25),
-                    AppTheme.mauve.withValues(alpha: 0.15),
+                    c.blue.withValues(alpha: 0.25),
+                    c.mauve.withValues(alpha: 0.15),
                   ],
           ),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: hasActive
-                ? AppTheme.green.withValues(alpha: 0.3)
-                : AppTheme.blue.withValues(alpha: 0.3),
+                ? c.green.withValues(alpha: 0.3)
+                : c.blue.withValues(alpha: 0.3),
             width: 1.5,
           ),
         ),
@@ -427,7 +427,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                     ? Icons.qr_code_2_rounded
                     : Icons.add_circle_rounded,
                 size: 44,
-                color: hasActive ? AppTheme.green : AppTheme.blue,
+                color: hasActive ? c.green : c.blue,
               ),
               const SizedBox(height: 12),
               Text(
@@ -437,7 +437,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                 style: GoogleFonts.outfit(
                   fontSize: 19,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white,
+                  color: c.text,
                 ),
               ),
             ],
@@ -447,42 +447,42 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, ThemeColors c) {
     return Text(
       title,
       style: GoogleFonts.outfit(
         fontSize: 13,
         fontWeight: FontWeight.w600,
-        color: AppTheme.overlay0,
+        color: c.overlay0,
         letterSpacing: 1.1,
       ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(ThemeColors c) {
     return Container(
       padding: const EdgeInsets.all(32),
       child: Column(
         children: [
-          Icon(Icons.inbox_rounded, size: 48, color: AppTheme.surface1),
+          Icon(Icons.inbox_rounded, size: 48, color: c.surface1),
           const SizedBox(height: 12),
           Text(
             'No cleaning requests yet',
-            style: GoogleFonts.outfit(color: AppTheme.overlay0, fontSize: 15),
+            style: GoogleFonts.outfit(color: c.overlay0, fontSize: 15),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHistoryCard(CleaningRequest r) {
+  Widget _buildHistoryCard(CleaningRequest r, ThemeColors c) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.base,
+        color: c.base,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.surface0),
+        border: Border.all(color: c.surface0),
       ),
       child: Row(
         children: [
@@ -492,13 +492,13 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             height: 40,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: _statusColor(r.status).withValues(alpha: 0.15),
+              color: _statusColor(r.status, c).withValues(alpha: 0.15),
             ),
             child: Icon(
               r.status == RequestStatus.completed
                   ? Icons.check_circle_rounded
                   : Icons.cancel_rounded,
-              color: _statusColor(r.status),
+              color: _statusColor(r.status, c),
               size: 20,
             ),
           ),
@@ -512,7 +512,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                   style: GoogleFonts.outfit(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: c.text,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -520,7 +520,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                   r.status.displayLabel,
                   style: TextStyle(
                     fontSize: 12,
-                    color: _statusColor(r.status),
+                    color: _statusColor(r.status, c),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -530,25 +530,25 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           // Time
           Text(
             _timeAgo(r.createdAt),
-            style: const TextStyle(color: AppTheme.overlay0, fontSize: 12),
+            style: TextStyle(color: c.overlay0, fontSize: 12),
           ),
         ],
       ),
     );
   }
 
-  Color _statusColor(RequestStatus status) {
+  Color _statusColor(RequestStatus status, ThemeColors c) {
     switch (status) {
       case RequestStatus.open:
-        return AppTheme.blue;
+        return c.blue;
       case RequestStatus.assigned:
-        return AppTheme.teal;
+        return c.teal;
       case RequestStatus.inProgress:
-        return AppTheme.peach;
+        return c.peach;
       case RequestStatus.completed:
-        return AppTheme.green;
+        return c.green;
       case RequestStatus.cancelledRoomLocked:
-        return AppTheme.red;
+        return c.red;
     }
   }
 
