@@ -31,8 +31,6 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
     super.dispose();
   }
 
-  Color get _accentColor => _isUrgent ? AppTheme.red : AppTheme.blue;
-
   Future<void> _submit() async {
     if (!_isSweeping && !_isMopping) {
       SoundService.instance.play(AppSound.error);
@@ -114,17 +112,20 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppTheme.of(context);
+    final accentColor = _isUrgent ? c.red : c.blue;
+
     return Scaffold(
-      backgroundColor: AppTheme.crust,
+      backgroundColor: c.crust,
       appBar: AppBar(
-        backgroundColor: AppTheme.base,
+        backgroundColor: c.base,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppTheme.text),
+          icon: Icon(Icons.arrow_back_ios_new, color: c.text),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('New Request',
             style: GoogleFonts.outfit(
-                fontWeight: FontWeight.w600, color: Colors.white)),
+                fontWeight: FontWeight.w600, color: c.text)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -132,27 +133,27 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Room Info (auto-filled) ──
-            _buildRoomInfo(),
+            _buildRoomInfo(c, accentColor),
             const SizedBox(height: 28),
 
             // ── Task Selection ──
-            _buildSectionLabel('Select Tasks'),
+            _buildSectionLabel('Select Tasks', c),
             const SizedBox(height: 14),
-            _buildTaskToggles(),
+            _buildTaskToggles(c, accentColor),
             const SizedBox(height: 28),
 
             // ── Urgent Toggle ──
-            _buildUrgentToggle(),
+            _buildUrgentToggle(c),
             const SizedBox(height: 28),
 
             // ── Notes ──
-            _buildSectionLabel('Notes for Cleaner (Optional)'),
+            _buildSectionLabel('Notes for Cleaner (Optional)', c),
             const SizedBox(height: 12),
-            _buildNotesField(),
+            _buildNotesField(c),
             const SizedBox(height: 36),
 
             // ── Submit ──
-            _buildSubmitButton(),
+            _buildSubmitButton(c, accentColor),
             const SizedBox(height: 24),
           ],
         ),
@@ -160,14 +161,14 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
     );
   }
 
-  Widget _buildRoomInfo() {
+  Widget _buildRoomInfo(ThemeColors c, Color accentColor) {
     final profile = AuthService.instance.currentProfile;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppTheme.base,
+        color: c.base,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.surface0),
+        border: Border.all(color: c.surface0),
       ),
       child: Row(
         children: [
@@ -176,10 +177,10 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
             height: 44,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: _accentColor.withValues(alpha: 0.15),
+              color: accentColor.withValues(alpha: 0.15),
             ),
             child: Icon(Icons.meeting_room_rounded,
-                color: _accentColor, size: 22),
+                color: accentColor, size: 22),
           ),
           const SizedBox(width: 14),
           Column(
@@ -190,12 +191,12 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
                 style: GoogleFonts.outfit(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white,
+                  color: c.text,
                 ),
               ),
               Text(
                 'Auto-filled from your profile',
-                style: TextStyle(fontSize: 12, color: AppTheme.overlay0),
+                style: TextStyle(fontSize: 12, color: c.overlay0),
               ),
             ],
           ),
@@ -204,19 +205,19 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
     );
   }
 
-  Widget _buildSectionLabel(String text) {
+  Widget _buildSectionLabel(String text, ThemeColors c) {
     return Text(
       text,
       style: GoogleFonts.outfit(
         fontSize: 13,
         fontWeight: FontWeight.w600,
-        color: AppTheme.overlay0,
+        color: c.overlay0,
         letterSpacing: 0.8,
       ),
     );
   }
 
-  Widget _buildTaskToggles() {
+  Widget _buildTaskToggles(ThemeColors c, Color accentColor) {
     return Row(
       children: [
         Expanded(
@@ -225,6 +226,8 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
             icon: Icons.cleaning_services_rounded,
             isSelected: _isSweeping,
             onTap: () => setState(() => _isSweeping = !_isSweeping),
+            c: c,
+            accentColor: accentColor,
           ),
         ),
         const SizedBox(width: 14),
@@ -234,6 +237,8 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
             icon: Icons.water_drop_rounded,
             isSelected: _isMopping,
             onTap: () => setState(() => _isMopping = !_isMopping),
+            c: c,
+            accentColor: accentColor,
           ),
         ),
       ],
@@ -245,6 +250,8 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
     required IconData icon,
     required bool isSelected,
     required VoidCallback onTap,
+    required ThemeColors c,
+    required Color accentColor,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -254,11 +261,11 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
         height: 130,
         decoration: BoxDecoration(
           color: isSelected
-              ? _accentColor.withValues(alpha: 0.12)
-              : AppTheme.base,
+              ? accentColor.withValues(alpha: 0.12)
+              : c.base,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? _accentColor : AppTheme.surface0,
+            color: isSelected ? accentColor : c.surface0,
             width: isSelected ? 2.5 : 1,
           ),
         ),
@@ -272,12 +279,12 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isSelected
-                    ? _accentColor.withValues(alpha: 0.2)
-                    : AppTheme.surface0.withValues(alpha: 0.5),
+                    ? accentColor.withValues(alpha: 0.2)
+                    : c.surface0.withValues(alpha: 0.5),
               ),
               child: Icon(
                 icon,
-                color: isSelected ? _accentColor : AppTheme.overlay0,
+                color: isSelected ? accentColor : c.overlay0,
                 size: 24,
               ),
             ),
@@ -288,7 +295,7 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
               style: GoogleFonts.outfit(
                 fontSize: 14,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? Colors.white : AppTheme.subtext0,
+                color: isSelected ? c.text : c.subtext0,
                 height: 1.3,
               ),
             ),
@@ -298,7 +305,7 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
     );
   }
 
-  Widget _buildUrgentToggle() {
+  Widget _buildUrgentToggle(ThemeColors c) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
@@ -306,17 +313,17 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
         gradient: _isUrgent
             ? LinearGradient(
                 colors: [
-                  AppTheme.red.withValues(alpha: 0.15),
-                  AppTheme.red.withValues(alpha: 0.05),
+                  c.red.withValues(alpha: 0.15),
+                  c.red.withValues(alpha: 0.05),
                 ],
               )
             : null,
-        color: _isUrgent ? null : AppTheme.base,
+        color: _isUrgent ? null : c.base,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _isUrgent
-              ? AppTheme.red.withValues(alpha: 0.4)
-              : AppTheme.surface0,
+              ? c.red.withValues(alpha: 0.4)
+              : c.surface0,
           width: _isUrgent ? 2 : 1,
         ),
       ),
@@ -326,7 +333,7 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
             _isUrgent
                 ? Icons.warning_amber_rounded
                 : Icons.schedule_rounded,
-            color: _isUrgent ? AppTheme.red : AppTheme.overlay0,
+            color: _isUrgent ? c.red : c.overlay0,
             size: 24,
           ),
           const SizedBox(width: 14),
@@ -339,7 +346,7 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
                   style: GoogleFonts.outfit(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: _isUrgent ? AppTheme.red : Colors.white,
+                    color: _isUrgent ? c.red : c.text,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -348,8 +355,8 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
                   style: TextStyle(
                     fontSize: 12,
                     color: _isUrgent
-                        ? AppTheme.red.withValues(alpha: 0.7)
-                        : AppTheme.overlay0,
+                        ? c.red.withValues(alpha: 0.7)
+                        : c.overlay0,
                   ),
                 ),
               ],
@@ -360,44 +367,44 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
             onChanged: (v) => setState(() => _isUrgent = v),
             thumbColor: WidgetStateProperty.resolveWith<Color>((states) {
               if (states.contains(WidgetState.selected)) {
-                return AppTheme.red;
+                return c.red;
               }
               return Colors.grey;
             }),
-            activeTrackColor: AppTheme.red.withValues(alpha: 0.3),
+            activeTrackColor: c.red.withValues(alpha: 0.3),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildNotesField() {
+  Widget _buildNotesField(ThemeColors c) {
     return TextField(
       controller: _notesController,
       maxLines: 4,
       maxLength: 500,
-      style: const TextStyle(color: Colors.white, fontSize: 15),
+      style: TextStyle(color: c.text, fontSize: 15),
       decoration: InputDecoration(
         hintText:
             'e.g., "Please be mindful of the glass on the floor" or "I am studying, please be quiet"',
-        hintStyle: TextStyle(color: AppTheme.overlay0.withValues(alpha: 0.6)),
-        counterStyle: const TextStyle(color: AppTheme.overlay0),
+        hintStyle: TextStyle(color: c.overlay0.withValues(alpha: 0.6)),
+        counterStyle: TextStyle(color: c.overlay0),
       ),
     );
   }
 
-  Widget _buildSubmitButton() {
+  Widget _buildSubmitButton(ThemeColors c, Color accentColor) {
     return SizedBox(
       width: double.infinity,
       height: 58,
       child: ElevatedButton.icon(
         onPressed: _isLoading ? null : _submit,
         icon: _isLoading
-            ? const SizedBox(
+            ? SizedBox(
                 width: 22,
                 height: 22,
                 child: CircularProgressIndicator(
-                    strokeWidth: 2.5, color: AppTheme.crust),
+                    strokeWidth: 2.5, color: c.crust),
               )
             : const Icon(Icons.broadcast_on_personal_rounded, size: 22),
         label: Text(
@@ -406,8 +413,8 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
               fontSize: 16, fontWeight: FontWeight.w700),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: _accentColor,
-          foregroundColor: AppTheme.crust,
+          backgroundColor: accentColor,
+          foregroundColor: c.crust,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           elevation: 0,

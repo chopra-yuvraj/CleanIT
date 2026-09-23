@@ -14,6 +14,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../config/app_theme.dart';
 import '../services/request_service.dart';
 import '../services/auth_service.dart';
 
@@ -261,35 +262,36 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
 
   // ── Room Locked Flow ──
   Future<void> _reportRoomLocked() async {
+    final c = AppTheme.of(context);
     // Confirm with the cleaner first
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E2E),
+        backgroundColor: c.base,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.lock_outline, color: Color(0xFFFF6B6B), size: 28),
-            SizedBox(width: 12),
-            Text('Room Locked?', style: TextStyle(color: Colors.white)),
+            Icon(Icons.lock_outline, color: c.red, size: 28),
+            const SizedBox(width: 12),
+            Text('Room Locked?', style: TextStyle(color: c.text)),
           ],
         ),
-        content: const Text(
+        content: Text(
           'You\'ll need to take a photo of the locked door as proof. '
           'The student will be notified that their request was cancelled.',
-          style: TextStyle(color: Color(0xFFCDD6F4), fontSize: 15),
+          style: TextStyle(color: c.subtext0, fontSize: 15),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Go Back', style: TextStyle(color: Color(0xFF6C7086))),
+            child: Text('Go Back', style: TextStyle(color: c.overlay0)),
           ),
           ElevatedButton.icon(
             onPressed: () => Navigator.pop(ctx, true),
             icon: const Icon(Icons.camera_alt, size: 18),
             label: const Text('Take Photo'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF6B6B),
+              backgroundColor: c.red,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -329,7 +331,7 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
             SnackBar(
               content: const Text('Report submitted. Student notified.',
                   style: TextStyle(color: Color(0xFF1E1E2E), fontWeight: FontWeight.w600)),
-              backgroundColor: const Color(0xFFFAB387),
+              backgroundColor: AppTheme.peach,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -353,7 +355,7 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
       SnackBar(
         content: Text(message,
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
-        backgroundColor: const Color(0xFFFF6B6B),
+        backgroundColor: AppTheme.red,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
@@ -361,11 +363,12 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
   }
 
   void _showSuccessDialog() {
+    final c = AppTheme.of(context);
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E2E),
+        backgroundColor: c.base,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -378,22 +381,22 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
                   colors: [
-                    const Color(0xFFA6E3A1).withValues(alpha: 0.3),
-                    const Color(0xFFA6E3A1).withValues(alpha: 0.1),
+                    c.green.withValues(alpha: 0.3),
+                    c.green.withValues(alpha: 0.1),
                   ],
                 ),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.check_circle_rounded,
-                color: Color(0xFFA6E3A1),
+                color: c.green,
                 size: 56,
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Job Completed! 🎉',
               style: TextStyle(
-                color: Colors.white,
+                color: c.text,
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
               ),
@@ -402,7 +405,7 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
             Text(
               'Room ${_job.roomLabel} has been cleaned successfully.',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFFCDD6F4), fontSize: 15),
+              style: TextStyle(color: c.subtext0, fontSize: 15),
             ),
             const SizedBox(height: 24),
             SizedBox(
@@ -413,8 +416,8 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
                   Navigator.pop(context); // Return to dashboard
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFA6E3A1),
-                  foregroundColor: const Color(0xFF1E1E2E),
+                  backgroundColor: c.green,
+                  foregroundColor: c.crust,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -439,19 +442,20 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
       return _buildQRScannerView();
     }
 
+    final c = AppTheme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFF11111B),
+      backgroundColor: c.crust,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E1E2E),
+        backgroundColor: c.base,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFFCDD6F4)),
+          icon: Icon(Icons.arrow_back_ios_new, color: c.text),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Active Job',
           style: TextStyle(
-            color: Colors.white,
+            color: c.text,
             fontWeight: FontWeight.w600,
             fontSize: 20,
           ),
@@ -470,7 +474,7 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              backgroundColor: _statusColor,
+              backgroundColor: _statusColor(c),
               padding: const EdgeInsets.symmetric(horizontal: 4),
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
@@ -485,27 +489,27 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ── Room Header ──
-                _buildRoomHeader(),
+                _buildRoomHeader(c),
                 const SizedBox(height: 24),
 
                 // ── Task Cards ──
-                _buildSectionTitle('Tasks'),
+                _buildSectionTitle('Tasks', c),
                 const SizedBox(height: 12),
-                _buildTaskCards(),
+                _buildTaskCards(c),
                 const SizedBox(height: 24),
 
                 // ── Student Notes ──
                 if (_job.notes != null && _job.notes!.isNotEmpty) ...[
-                  _buildSectionTitle('Note from Student'),
+                  _buildSectionTitle('Note from Student', c),
                   const SizedBox(height: 12),
-                  _buildNotesCard(),
+                  _buildNotesCard(c),
                   const SizedBox(height: 24),
                 ],
 
                 // ── Student Info ──
-                _buildSectionTitle('Student'),
+                _buildSectionTitle('Student', c),
                 const SizedBox(height: 12),
-                _buildStudentInfoCard(),
+                _buildStudentInfoCard(c),
               ],
             ),
           ),
@@ -515,16 +519,16 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
             left: 0,
             right: 0,
             bottom: 0,
-            child: _buildActionButtons(),
+            child: _buildActionButtons(c),
           ),
 
           // ── Loading Overlay ──
           if (_isLoading)
             Container(
               color: Colors.black54,
-              child: const Center(
+              child: Center(
                 child: CircularProgressIndicator(
-                  color: Color(0xFF89B4FA),
+                  color: c.blue,
                 ),
               ),
             ),
@@ -533,20 +537,20 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
     );
   }
 
-  Color get _statusColor {
+  Color _statusColor(ThemeColors c) {
     switch (_job.status) {
       case 'ASSIGNED':
-        return const Color(0xFF89B4FA);
+        return c.blue;
       case 'IN_PROGRESS':
-        return const Color(0xFFFAB387);
+        return c.peach;
       case 'COMPLETED':
-        return const Color(0xFFA6E3A1);
+        return c.green;
       default:
-        return const Color(0xFF6C7086);
+        return c.overlay0;
     }
   }
 
-  Widget _buildRoomHeader() {
+  Widget _buildRoomHeader(ThemeColors c) {
     return ScaleTransition(
       scale: _job.isUrgent ? _pulseAnimation : const AlwaysStoppedAnimation(1.0),
       child: Container(
@@ -558,19 +562,19 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
             end: Alignment.bottomRight,
             colors: _job.isUrgent
                 ? [
-                    const Color(0xFFFF6B6B).withValues(alpha: 0.25),
-                    const Color(0xFFEE5A24).withValues(alpha: 0.15),
+                    c.red.withValues(alpha: 0.25),
+                    c.red.withValues(alpha: 0.15),
                   ]
                 : [
-                    const Color(0xFF89B4FA).withValues(alpha: 0.15),
-                    const Color(0xFFCBA6F7).withValues(alpha: 0.1),
+                    c.blue.withValues(alpha: 0.15),
+                    c.mauve.withValues(alpha: 0.1),
                   ],
           ),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: _job.isUrgent
-                ? const Color(0xFFFF6B6B).withValues(alpha: 0.4)
-                : const Color(0xFF89B4FA).withValues(alpha: 0.2),
+                ? c.red.withValues(alpha: 0.4)
+                : c.blue.withValues(alpha: 0.2),
             width: 1.5,
           ),
         ),
@@ -582,7 +586,7 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFF6B6B),
+                  color: c.red,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Row(
@@ -614,9 +618,7 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
               child: Icon(
                 Icons.meeting_room_rounded,
                 size: 32,
-                color: _job.isUrgent
-                    ? const Color(0xFFFF6B6B)
-                    : const Color(0xFF89B4FA),
+                color: _job.isUrgent ? c.red : c.blue,
               ),
             ),
             const SizedBox(height: 16),
@@ -624,8 +626,8 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
             // Room label
             Text(
               'Room ${_job.roomLabel}',
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: c.text,
                 fontSize: 28,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.5,
@@ -637,11 +639,11 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, ThemeColors c) {
     return Text(
       title,
-      style: const TextStyle(
-        color: Color(0xFF6C7086),
+      style: TextStyle(
+        color: c.overlay0,
         fontSize: 13,
         fontWeight: FontWeight.w600,
         letterSpacing: 1.1,
@@ -649,36 +651,36 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
     );
   }
 
-  Widget _buildTaskCards() {
+  Widget _buildTaskCards(ThemeColors c) {
     return Row(
       children: [
         if (_job.isSweeping)
-          Expanded(child: _taskChip('Floor Sweeping', Icons.cleaning_services_rounded)),
+          Expanded(child: _taskChip('Floor Sweeping', Icons.cleaning_services_rounded, c)),
         if (_job.isSweeping && _job.isMopping) const SizedBox(width: 12),
         if (_job.isMopping)
-          Expanded(child: _taskChip('Wet Mopping', Icons.water_drop_rounded)),
+          Expanded(child: _taskChip('Wet Mopping', Icons.water_drop_rounded, c)),
       ],
     );
   }
 
-  Widget _taskChip(String label, IconData icon) {
+  Widget _taskChip(String label, IconData icon, ThemeColors c) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E2E),
+        color: c.base,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF313244), width: 1),
+        border: Border.all(color: c.surface0, width: 1),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: const Color(0xFF89DCEB), size: 22),
+          Icon(icon, color: c.teal, size: 22),
           const SizedBox(width: 10),
           Flexible(
             child: Text(
               label,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: c.text,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -689,29 +691,29 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
     );
   }
 
-  Widget _buildNotesCard() {
+  Widget _buildNotesCard(ThemeColors c) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E2E),
+        color: c.base,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF313244), width: 1),
+        border: Border.all(color: c.surface0, width: 1),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
+          Icon(
             Icons.sticky_note_2_rounded,
-            color: Color(0xFFF9E2AF),
+            color: c.yellow,
             size: 22,
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Text(
               _job.notes!,
-              style: const TextStyle(
-                color: Color(0xFFCDD6F4),
+              style: TextStyle(
+                color: c.text,
                 fontSize: 15,
                 height: 1.5,
               ),
@@ -722,24 +724,24 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
     );
   }
 
-  Widget _buildStudentInfoCard() {
+  Widget _buildStudentInfoCard(ThemeColors c) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E2E),
+        color: c.base,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF313244), width: 1),
+        border: Border.all(color: c.surface0, width: 1),
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 22,
-            backgroundColor: const Color(0xFFCBA6F7).withValues(alpha: 0.2),
+            backgroundColor: c.mauve.withValues(alpha: 0.2),
             child: Text(
               _job.studentName.isNotEmpty ? _job.studentName[0].toUpperCase() : '?',
-              style: const TextStyle(
-                color: Color(0xFFCBA6F7),
+              style: TextStyle(
+                color: c.mauve,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -752,8 +754,8 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
               children: [
                 Text(
                   _job.studentName,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: c.text,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -761,8 +763,8 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
                 const SizedBox(height: 2),
                 Text(
                   'Room ${_job.roomLabel}',
-                  style: const TextStyle(
-                    color: Color(0xFF6C7086),
+                  style: TextStyle(
+                    color: c.overlay0,
                     fontSize: 13,
                   ),
                 ),
@@ -774,11 +776,11 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(ThemeColors c) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E2E),
+        color: c.base,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
@@ -814,8 +816,8 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
                   style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF89B4FA),
-                  foregroundColor: const Color(0xFF1E1E2E),
+                  backgroundColor: c.blue,
+                  foregroundColor: c.crust,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -836,8 +838,8 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFA6E3A1),
-                  foregroundColor: const Color(0xFF1E1E2E),
+                  backgroundColor: c.green,
+                  foregroundColor: c.crust,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -860,7 +862,7 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
                   style: TextStyle(fontSize: 14),
                 ),
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF6C7086),
+                  foregroundColor: c.overlay0,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
@@ -903,7 +905,7 @@ class _CleanerJobDetailsScreenState extends State<CleanerJobDetailsScreen>
               height: 260,
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: const Color(0xFFA6E3A1).withValues(alpha: 0.7),
+                  color: AppTheme.green.withValues(alpha: 0.7),
                   width: 3,
                 ),
                 borderRadius: BorderRadius.circular(24),

@@ -66,6 +66,7 @@ Future<void> main() async {
     });
   }
 
+  await loadSavedTheme();
   runApp(const CleanITApp());
 }
 

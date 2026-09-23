@@ -164,11 +164,12 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
   }
 
   void _showLockedDialog() {
+    final c = AppTheme.of(context);
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.base,
+        backgroundColor: c.base,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -179,23 +180,23 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
               height: 64,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppTheme.red.withValues(alpha: 0.15),
+                color: c.red.withValues(alpha: 0.15),
               ),
-              child: const Icon(Icons.lock_rounded,
-                  color: AppTheme.red, size: 32),
+              child: Icon(Icons.lock_rounded,
+                  color: c.red, size: 32),
             ),
             const SizedBox(height: 18),
             Text('Room Was Locked',
                 style: GoogleFonts.outfit(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white)),
+                    color: c.text)),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Your cleaner arrived, but your room was locked. '
               'The request has been cancelled.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppTheme.subtext0, fontSize: 14),
+              style: TextStyle(color: c.subtext0, fontSize: 14),
             ),
             const SizedBox(height: 24),
             SizedBox(
@@ -206,7 +207,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                   Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.red,
+                    backgroundColor: c.red,
                     foregroundColor: Colors.white),
                 child: const Text('Understood'),
               ),
@@ -219,19 +220,20 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_showFeedback) return _buildFeedbackView();
+    final c = AppTheme.of(context);
+    if (_showFeedback) return _buildFeedbackView(c);
 
     return Scaffold(
-      backgroundColor: AppTheme.crust,
+      backgroundColor: c.crust,
       appBar: AppBar(
-        backgroundColor: AppTheme.base,
+        backgroundColor: c.base,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppTheme.text),
+          icon: Icon(Icons.arrow_back_ios_new, color: c.text),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('Active Request',
             style: GoogleFonts.outfit(
-                fontWeight: FontWeight.w600, color: Colors.white)),
+                fontWeight: FontWeight.w600, color: c.text)),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 16),
@@ -241,7 +243,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                       color: Colors.white,
                       fontSize: 11,
                       fontWeight: FontWeight.w600)),
-              backgroundColor: _statusColor,
+              backgroundColor: _statusColor(c),
             ),
           ),
         ],
@@ -251,22 +253,22 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
         child: Column(
           children: [
             // ── Status Timeline ──
-            _buildStatusTimeline(),
+            _buildStatusTimeline(c),
             const SizedBox(height: 28),
 
             // ── Task Info ──
-            _buildInfoCard(),
+            _buildInfoCard(c),
             const SizedBox(height: 20),
 
             // ── Cleaner Info (if assigned) ──
             if (_request.cleanerName != null) ...[
-              _buildCleanerCard(),
+              _buildCleanerCard(c),
               const SizedBox(height: 28),
             ],
 
             // ── QR Section ──
             if (_request.status == RequestStatus.inProgress) ...[
-              if (_qrPayload != null) _buildQRDisplay() else _buildGenerateQRButton(),
+              if (_qrPayload != null) _buildQRDisplay(c) else _buildGenerateQRButton(c),
             ],
           ],
         ),
@@ -274,22 +276,22 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
     );
   }
 
-  Color get _statusColor {
+  Color _statusColor(ThemeColors c) {
     switch (_request.status) {
       case RequestStatus.open:
-        return AppTheme.blue;
+        return c.blue;
       case RequestStatus.assigned:
-        return AppTheme.teal;
+        return c.teal;
       case RequestStatus.inProgress:
-        return AppTheme.peach;
+        return c.peach;
       case RequestStatus.completed:
-        return AppTheme.green;
+        return c.green;
       case RequestStatus.cancelledRoomLocked:
-        return AppTheme.red;
+        return c.red;
     }
   }
 
-  Widget _buildStatusTimeline() {
+  Widget _buildStatusTimeline(ThemeColors c) {
     final steps = [
       ('Open', RequestStatus.open, Icons.radio_button_checked_rounded),
       ('Assigned', RequestStatus.assigned, Icons.person_add_alt_1_rounded),
@@ -302,15 +304,16 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.base,
+        color: c.base,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.surface0),
+        border: Border.all(color: c.surface0),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: List.generate(steps.length, (i) {
           final isActive = i <= currentIdx;
           final isCurrent = i == currentIdx;
+          final sc = _statusColor(c);
           return Expanded(
             child: Column(
               children: [
@@ -320,16 +323,16 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: isActive
-                        ? _statusColor.withValues(alpha: isCurrent ? 0.3 : 0.1)
-                        : AppTheme.surface0,
+                        ? sc.withValues(alpha: isCurrent ? 0.3 : 0.1)
+                        : c.surface0,
                     border: isCurrent
-                        ? Border.all(color: _statusColor, width: 2)
+                        ? Border.all(color: sc, width: 2)
                         : null,
                   ),
                   child: Icon(
                     steps[i].$3,
                     size: 18,
-                    color: isActive ? _statusColor : AppTheme.overlay0,
+                    color: isActive ? sc : c.overlay0,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -338,7 +341,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
-                    color: isActive ? Colors.white : AppTheme.overlay0,
+                    color: isActive ? c.text : c.overlay0,
                   ),
                 ),
               ],
@@ -349,14 +352,14 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
     );
   }
 
-  Widget _buildInfoCard() {
+  Widget _buildInfoCard(ThemeColors c) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.base,
+        color: c.base,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.surface0),
+        border: Border.all(color: c.surface0),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -365,13 +368,13 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
               style: GoogleFonts.outfit(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white)),
+                  color: c.text)),
           if (_request.isUrgent) ...[
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                  color: AppTheme.red, borderRadius: BorderRadius.circular(8)),
+                  color: c.red, borderRadius: BorderRadius.circular(8)),
               child: const Text('URGENT',
                   style: TextStyle(
                       color: Colors.white,
@@ -384,13 +387,13 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.sticky_note_2_rounded,
-                    color: AppTheme.yellow, size: 18),
+                Icon(Icons.sticky_note_2_rounded,
+                    color: c.yellow, size: 18),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(_request.notes!,
-                      style: const TextStyle(
-                          color: AppTheme.subtext0, fontSize: 14)),
+                      style: TextStyle(
+                          color: c.subtext0, fontSize: 14)),
                 ),
               ],
             ),
@@ -400,34 +403,34 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
     );
   }
 
-  Widget _buildCleanerCard() {
+  Widget _buildCleanerCard(ThemeColors c) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppTheme.base,
+        color: c.base,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.surface0),
+        border: Border.all(color: c.surface0),
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 22,
-            backgroundColor: AppTheme.green.withValues(alpha: 0.2),
-            child: const Icon(Icons.person, color: AppTheme.green, size: 22),
+            backgroundColor: c.green.withValues(alpha: 0.2),
+            child: Icon(Icons.person, color: c.green, size: 22),
           ),
           const SizedBox(width: 14),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Assigned Cleaner',
-                  style: TextStyle(color: AppTheme.overlay0, fontSize: 12)),
+              Text('Assigned Cleaner',
+                  style: TextStyle(color: c.overlay0, fontSize: 12)),
               const SizedBox(height: 2),
               Text(_request.cleanerName!,
                   style: GoogleFonts.outfit(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white)),
+                      color: c.text)),
             ],
           ),
         ],
@@ -435,7 +438,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
     );
   }
 
-  Widget _buildGenerateQRButton() {
+  Widget _buildGenerateQRButton(ThemeColors c) {
     return SizedBox(
       width: double.infinity,
       height: 120,
@@ -446,8 +449,8 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
             style: GoogleFonts.outfit(
                 fontSize: 18, fontWeight: FontWeight.w700)),
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.green,
-          foregroundColor: AppTheme.crust,
+          backgroundColor: c.green,
+          foregroundColor: c.crust,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         ),
@@ -455,14 +458,14 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
     );
   }
 
-  Widget _buildQRDisplay() {
+  Widget _buildQRDisplay(ThemeColors c) {
     final minutes = _qrRemainingSeconds ~/ 60;
     final seconds = _qrRemainingSeconds % 60;
     final isExpiring = _qrRemainingSeconds < 30;
 
     return Column(
       children: [
-        // QR Code
+        // QR Code — always white background for scannability
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
@@ -488,11 +491,11 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           decoration: BoxDecoration(
             color: isExpiring
-                ? AppTheme.red.withValues(alpha: 0.15)
-                : AppTheme.base,
+                ? c.red.withValues(alpha: 0.15)
+                : c.base,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isExpiring ? AppTheme.red : AppTheme.surface0,
+              color: isExpiring ? c.red : c.surface0,
             ),
           ),
           child: Row(
@@ -500,12 +503,12 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
             children: [
               Icon(Icons.timer_outlined,
                   size: 18,
-                  color: isExpiring ? AppTheme.red : AppTheme.overlay0),
+                  color: isExpiring ? c.red : c.overlay0),
               const SizedBox(width: 8),
               Text(
                 'Expires in ${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
                 style: TextStyle(
-                  color: isExpiring ? AppTheme.red : AppTheme.text,
+                  color: isExpiring ? c.red : c.text,
                   fontWeight: FontWeight.w600,
                   fontSize: 15,
                 ),
@@ -520,17 +523,16 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
           onPressed: _generateQR,
           icon: const Icon(Icons.refresh, size: 18),
           label: const Text('Generate New Code'),
-          style:
-              TextButton.styleFrom(foregroundColor: AppTheme.blue),
+          style: TextButton.styleFrom(foregroundColor: c.blue),
         ),
       ],
     );
   }
 
   // ── Feedback View ──
-  Widget _buildFeedbackView() {
+  Widget _buildFeedbackView(ThemeColors c) {
     return Scaffold(
-      backgroundColor: AppTheme.crust,
+      backgroundColor: c.crust,
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -543,20 +545,20 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                   height: 80,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppTheme.green.withValues(alpha: 0.15),
+                    color: c.green.withValues(alpha: 0.15),
                   ),
-                  child: const Icon(Icons.check_circle_rounded,
-                      color: AppTheme.green, size: 48),
+                  child: Icon(Icons.check_circle_rounded,
+                      color: c.green, size: 48),
                 ),
                 const SizedBox(height: 24),
                 Text('Room Cleaned! 🎉',
                     style: GoogleFonts.outfit(
                         fontSize: 26,
                         fontWeight: FontWeight.w800,
-                        color: Colors.white)),
+                        color: c.text)),
                 const SizedBox(height: 8),
-                const Text('How was the cleaning?',
-                    style: TextStyle(color: AppTheme.subtext0, fontSize: 16)),
+                Text('How was the cleaning?',
+                    style: TextStyle(color: c.subtext0, fontSize: 16)),
                 const SizedBox(height: 32),
 
                 // Star rating
@@ -573,8 +575,8 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                               : Icons.star_border_rounded,
                           size: 44,
                           color: i < _rating
-                              ? AppTheme.yellow
-                              : AppTheme.surface1,
+                              ? c.yellow
+                              : c.surface1,
                         ),
                       ),
                     );
@@ -588,29 +590,19 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                   maxLines: 3,
                   maxLength: 300,
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
+                    color: c.text,
                     fontSize: 15,
                   ),
                   decoration: InputDecoration(
                     hintText: 'Add a comment (optional)...',
-                    hintStyle: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? AppTheme.overlay0
-                          : AppTheme.lOverlay0,
-                    ),
-                    counterStyle: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? AppTheme.overlay0
-                          : AppTheme.lOverlay0,
-                    ),
+                    hintStyle: TextStyle(color: c.overlay0),
+                    counterStyle: TextStyle(color: c.overlay0),
                     prefixIcon: Padding(
                       padding: const EdgeInsets.only(left: 14, right: 8, bottom: 40),
                       child: Icon(
                         Icons.comment_outlined,
                         size: 20,
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? AppTheme.overlay0
-                            : AppTheme.lOverlay0,
+                        color: c.overlay0,
                       ),
                     ),
                   ),
@@ -623,8 +615,8 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                   child: ElevatedButton(
                     onPressed: _rating > 0 ? _submitFeedback : null,
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.green,
-                        foregroundColor: AppTheme.crust),
+                        backgroundColor: c.green,
+                        foregroundColor: c.crust),
                     child: Text('Submit Feedback',
                         style: GoogleFonts.outfit(
                             fontSize: 17, fontWeight: FontWeight.w700)),
@@ -633,8 +625,8 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                 const SizedBox(height: 12),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Skip',
-                      style: TextStyle(color: AppTheme.overlay0)),
+                  child: Text('Skip',
+                      style: TextStyle(color: c.overlay0)),
                 ),
               ],
             ),
