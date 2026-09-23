@@ -5,6 +5,7 @@
 
 import 'api_client.dart';
 import '../models/analytics_model.dart';
+import '../models/request_model.dart';
 
 class AnalyticsService {
   AnalyticsService._();
@@ -85,5 +86,22 @@ class AnalyticsService {
   /// Full-text search across request notes
   Future<Map<String, dynamic>> searchRequests(String query) async {
     return await _api.get('/admin/search?q=${Uri.encodeComponent(query)}');
+  }
+
+  /// Fetch soft-deleted requests
+  Future<List<CleaningRequest>> fetchDeletedRequests({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    final response = await _api.get('/admin/deleted-requests?page=$page&limit=$limit');
+    final requests = response['requests'] as List<dynamic>? ?? [];
+    return requests
+        .map((json) => CleaningRequest.fromJson(json as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Restore a soft-deleted request
+  Future<Map<String, dynamic>> restoreRequest(String id) async {
+    return await _api.put('/admin/restore-request/$id');
   }
 }

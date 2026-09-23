@@ -14,6 +14,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../config/app_theme.dart';
 import '../config/theme_notifier.dart';
 import '../models/analytics_model.dart';
+import '../models/request_model.dart';
 import '../services/analytics_service.dart';
 import '../services/auth_service.dart';
 import 'auth_screen.dart';
@@ -37,13 +38,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   List<HourlyStat> _peakHours = [];
   List<StatusStat> _statusDist = [];
   List<AuditLogEntry> _auditLogs = [];
+  List<CleaningRequest> _deletedRequests = [];
 
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _loadAllData();
   }
 
@@ -63,6 +65,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         _analytics.fetchPeakHours(),
         _analytics.fetchStatusDistribution(),
         _analytics.fetchAuditLogs(),
+        _analytics.fetchDeletedRequests(),
       ]);
 
       if (mounted) {
@@ -73,6 +76,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           _peakHours = results[3] as List<HourlyStat>;
           _statusDist = results[4] as List<StatusStat>;
           _auditLogs = results[5] as List<AuditLogEntry>;
+          _deletedRequests = results[6] as List<CleaningRequest>;
         });
       }
     } catch (e) {
@@ -160,6 +164,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             Tab(text: 'Blocks', icon: Icon(Icons.apartment_rounded, size: 18)),
             Tab(text: 'Cleaners', icon: Icon(Icons.leaderboard_rounded, size: 18)),
             Tab(text: 'Audit Log', icon: Icon(Icons.history_rounded, size: 18)),
+            Tab(text: 'Trash', icon: Icon(Icons.delete_outline_rounded, size: 18)),
           ],
         ),
       ),
@@ -172,6 +177,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 _buildBlocksTab(c),
                 _buildCleanersTab(c),
                 _buildAuditTab(c),
+                _buildTrashTab(c),
               ],
             ),
     );
@@ -577,4 +583,105 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       default: return c.overlay0;
     }
   }
+
+  // ─────────────────────────────────────────────────────────
+  //  Trash Tab (Deleted Requests)
+  // ─────────────────────────────────────────────────────────
+  Widget _buildTrashTab(ThemeColors c) {
+    return RefreshIndicator(
+      onRefresh: _loadAllData,
+      color: c.mauve,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _sectionTitle('🗑️ Soft-Deleted Requests', 'Click restore to undo deletion', c),
+          const SizedBox(height: 12),
+          if (_deletedRequests.isEmpty)
+            Center(child: Padding(
+              padding: const EdgeInsets.all(40),
+              child: Text('No deleted requests', style: TextStyle(color: c.subtext0)),
+            )),
+          ..._deletedRequests.map((req) => _deletedRequestTile(req, c)),
+        ],
+      ),
+    );
+  }
+
+  Widget _deletedRequestTile(CleaningRequest req, ThemeColors c) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: c.base,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: c.surface0),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: c.red.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.delete_outline_rounded, color: c.red, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${req.studentName ?? "Student"} (${req.roomLabel})',
+                  style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: c.text),
+                ),
+                const SizedBox(height: 4),
+                Text(req.tasksSummary, style: TextStyle(color: c.subtext0, fontSize: 12)),
+                if (req.notes != null && req.notes!.isNotEmpty)
+                  Text('Notes: ${req.notes}', style: TextStyle(color: c.overlay0, fontSize: 11)),
+              ],
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => _restoreRequest(req.id),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: c.mauve,
+              foregroundColor: c.crust,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            icon: const Icon(Icons.restore_rounded, size: 16),
+            label: const Text('Restore', style: TextStyle(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _restoreRequest(String id) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final res = await _analytics.restoreRequest(id);
+      if (mounted) {
+        Navigator.pop(context); // close dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res['message'] ?? 'Restored successfully'), backgroundColor: AppTheme.of(context).green),
+        );
+        _loadAllData();
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // close dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to restore: $e'), backgroundColor: AppTheme.of(context).red),
+        );
+      }
+    }
+  }
 }
+
