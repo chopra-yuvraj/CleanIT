@@ -109,7 +109,12 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
 
 
   Future<void> _toggleOnDuty(bool value) async {
-    setState(() => _isOnDuty = value);
+    setState(() {
+      _isOnDuty = value;
+      if (!value) {
+        _openRequests.clear();
+      }
+    });
     try {
       await _auth.toggleOnDuty(value);
     } catch (e) {
@@ -431,12 +436,15 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
                   ],
 
                   // ── Open Requests (Live Radar) ──
-                  _buildSectionTitle('Open Requests', c),
-                  const SizedBox(height: 14),
-                  if (_openRequests.isEmpty)
-                    _buildEmptyRadar(c)
-                  else
-                    ..._openRequests.map((r) => _buildOpenRequestCard(r, c)),
+                  if (_isOnDuty) ...[
+                    _buildSectionTitle('Open Requests', c),
+                    const SizedBox(height: 14),
+                    if (_openRequests.isEmpty)
+                      _buildEmptyRadar(c)
+                    else
+                      ..._openRequests.map((r) => _buildOpenRequestCard(r, c)),
+                  ] else
+                    _buildOffDutyState(c),
                 ],
               ),
             ),
@@ -671,6 +679,32 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOffDutyState(ThemeColors c) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 64),
+      child: Column(
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: c.base,
+              border: Border.all(color: c.surface0, width: 2),
+            ),
+            child: Icon(Icons.bedtime_rounded, color: c.overlay0, size: 36),
+          ),
+          const SizedBox(height: 20),
+          Text('You are currently Off Duty',
+              style: GoogleFonts.outfit(color: c.text, fontSize: 18, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Text('Toggle On Duty above to receive new requests.',
+              style: TextStyle(color: c.subtext0, fontSize: 14)),
         ],
       ),
     );
