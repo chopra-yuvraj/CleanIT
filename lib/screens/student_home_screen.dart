@@ -146,19 +146,24 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: Icon(
-              themeNotifier.value == ThemeMode.dark
-                  ? Icons.light_mode_rounded
-                  : Icons.dark_mode_rounded,
-              color: AppTheme.overlay0,
-            ),
-            tooltip: 'Toggle theme',
-            onPressed: () {
-              themeNotifier.value =
-                  themeNotifier.value == ThemeMode.dark
-                      ? ThemeMode.light
-                      : ThemeMode.dark;
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: themeNotifier,
+            builder: (context, mode, _) {
+              return IconButton(
+                icon: Icon(
+                  mode == ThemeMode.dark
+                      ? Icons.light_mode_rounded
+                      : Icons.dark_mode_rounded,
+                  color: AppTheme.overlay0,
+                ),
+                tooltip: 'Toggle theme',
+                onPressed: () {
+                  themeNotifier.value =
+                      themeNotifier.value == ThemeMode.dark
+                          ? ThemeMode.light
+                          : ThemeMode.dark;
+                },
+              );
             },
           ),
           IconButton(
