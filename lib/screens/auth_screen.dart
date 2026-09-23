@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/app_theme.dart';
+import '../config/theme_notifier.dart';
 import '../models/models.dart';
 import '../services/services.dart';
 import 'student_home_screen.dart';
@@ -104,10 +105,11 @@ class _AuthScreenState extends State<AuthScreen>
       if (profile == null) {
         // Sign up was successful but email needs confirmation
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account created! Please check your email to verify.'),
+          SnackBar(
+            content: const Text('Account created! Please check your email to verify.',
+                style: TextStyle(color: Color(0xFF1E1E2E), fontWeight: FontWeight.w600)),
             backgroundColor: AppTheme.green,
-            duration: Duration(seconds: 6),
+            duration: const Duration(seconds: 6),
           ),
         );
         _toggleMode(); // Switch back to login page
@@ -132,7 +134,8 @@ class _AuthScreenState extends State<AuthScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
+          content: Text(e.toString().replaceAll('Exception: ', ''),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
           backgroundColor: AppTheme.red,
         ),
       );
@@ -143,8 +146,34 @@ class _AuthScreenState extends State<AuthScreen>
 
   @override
   Widget build(BuildContext context) {
+    final c = AppTheme.of(context);
     return Scaffold(
-      backgroundColor: AppTheme.crust,
+      backgroundColor: c.crust,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: themeNotifier,
+            builder: (context, mode, _) {
+              return IconButton(
+                icon: Icon(
+                  mode == ThemeMode.dark
+                      ? Icons.light_mode_rounded
+                      : Icons.dark_mode_rounded,
+                  color: c.overlay0,
+                ),
+                tooltip: 'Toggle theme',
+                onPressed: () {
+                  themeNotifier.value = themeNotifier.value == ThemeMode.dark
+                      ? ThemeMode.light
+                      : ThemeMode.dark;
+                },
+              );
+            },
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -155,15 +184,15 @@ class _AuthScreenState extends State<AuthScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // ── Logo / Title ──
-                  _buildHeader(),
+                  _buildHeader(c),
                   const SizedBox(height: 40),
 
                   // ── Auth Card ──
-                  _buildAuthCard(),
+                  _buildAuthCard(c),
                   const SizedBox(height: 24),
 
                   // ── Toggle Login / Sign Up ──
-                  _buildToggle(),
+                  _buildToggle(c),
                 ],
               ),
             ),
@@ -173,7 +202,7 @@ class _AuthScreenState extends State<AuthScreen>
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(ThemeColors c) {
     return Column(
       children: [
         // App icon
@@ -186,15 +215,15 @@ class _AuthScreenState extends State<AuthScreen>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                AppTheme.blue.withValues(alpha: 0.3),
-                AppTheme.mauve.withValues(alpha: 0.2),
+                c.blue.withValues(alpha: 0.3),
+                c.mauve.withValues(alpha: 0.2),
               ],
             ),
-            border: Border.all(color: AppTheme.blue.withValues(alpha: 0.4)),
+            border: Border.all(color: c.blue.withValues(alpha: 0.4)),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.cleaning_services_rounded,
-            color: AppTheme.blue,
+            color: c.blue,
             size: 40,
           ),
         ),
@@ -204,7 +233,7 @@ class _AuthScreenState extends State<AuthScreen>
           style: GoogleFonts.outfit(
             fontSize: 36,
             fontWeight: FontWeight.w800,
-            color: Colors.white,
+            color: c.text,
             letterSpacing: -1,
           ),
         ),
@@ -213,23 +242,23 @@ class _AuthScreenState extends State<AuthScreen>
           'Hostel room cleaning, simplified.',
           style: GoogleFonts.outfit(
             fontSize: 15,
-            color: AppTheme.overlay0,
+            color: c.overlay0,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildAuthCard() {
+  Widget _buildAuthCard(ThemeColors c) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppTheme.base,
+        color: c.base,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.surface0),
+        border: Border.all(color: c.surface0),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 30,
             offset: const Offset(0, 10),
           ),
@@ -246,7 +275,7 @@ class _AuthScreenState extends State<AuthScreen>
               style: GoogleFonts.outfit(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
-                color: Colors.white,
+                color: c.text,
               ),
             ),
             const SizedBox(height: 24),
@@ -255,11 +284,12 @@ class _AuthScreenState extends State<AuthScreen>
             if (!_isLogin) ...[
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Full Name',
-                  prefixIcon: Icon(Icons.person_outline, color: AppTheme.overlay0),
+                  labelStyle: TextStyle(color: c.overlay0),
+                  prefixIcon: Icon(Icons.person_outline, color: c.overlay0),
                 ),
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: c.text),
                 validator: (v) =>
                     (v == null || v.trim().isEmpty) ? 'Name is required' : null,
               ),
@@ -270,11 +300,12 @@ class _AuthScreenState extends State<AuthScreen>
             TextFormField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Email',
-                prefixIcon: Icon(Icons.email_outlined, color: AppTheme.overlay0),
+                labelStyle: TextStyle(color: c.overlay0),
+                prefixIcon: Icon(Icons.email_outlined, color: c.overlay0),
               ),
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: c.text),
               validator: (v) =>
                   (v == null || !v.contains('@')) ? 'Enter a valid email' : null,
             ),
@@ -284,11 +315,12 @@ class _AuthScreenState extends State<AuthScreen>
             TextFormField(
               controller: _passwordController,
               obscureText: true,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Password',
-                prefixIcon: Icon(Icons.lock_outline, color: AppTheme.overlay0),
+                labelStyle: TextStyle(color: c.overlay0),
+                prefixIcon: Icon(Icons.lock_outline, color: c.overlay0),
               ),
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: c.text),
               validator: (v) =>
                   (v == null || v.length < 6) ? 'Min 6 characters' : null,
             ),
@@ -301,16 +333,16 @@ class _AuthScreenState extends State<AuthScreen>
                 style: GoogleFonts.outfit(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: AppTheme.subtext0,
+                  color: c.subtext0,
                 ),
               ),
               const SizedBox(height: 10),
               Row(
                 children: [
-                  _roleChip(UserRole.student, 'Student', Icons.school_rounded),
+                  _roleChip(UserRole.student, 'Student', Icons.school_rounded, c),
                   const SizedBox(width: 12),
                   _roleChip(
-                      UserRole.cleaner, 'Cleaner', Icons.cleaning_services),
+                      UserRole.cleaner, 'Cleaner', Icons.cleaning_services, c),
                 ],
               ),
             ],
@@ -323,13 +355,15 @@ class _AuthScreenState extends State<AuthScreen>
                   Expanded(
                     child: TextFormField(
                       controller: _blockController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Block',
+                        labelStyle: TextStyle(color: c.overlay0),
                         hintText: 'A',
+                        hintStyle: TextStyle(color: c.surface1),
                         prefixIcon:
-                            Icon(Icons.apartment, color: AppTheme.overlay0),
+                            Icon(Icons.apartment, color: c.overlay0),
                       ),
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: c.text),
                       validator: (v) => (v == null || v.trim().isEmpty)
                           ? 'Required'
                           : null,
@@ -339,13 +373,15 @@ class _AuthScreenState extends State<AuthScreen>
                   Expanded(
                     child: TextFormField(
                       controller: _roomController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Room',
+                        labelStyle: TextStyle(color: c.overlay0),
                         hintText: '101',
+                        hintStyle: TextStyle(color: c.surface1),
                         prefixIcon: Icon(Icons.meeting_room_outlined,
-                            color: AppTheme.overlay0),
+                            color: c.overlay0),
                       ),
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: c.text),
                       validator: (v) => (v == null || v.trim().isEmpty)
                           ? 'Required'
                           : null,
@@ -364,19 +400,19 @@ class _AuthScreenState extends State<AuthScreen>
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _submit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.blue,
-                  foregroundColor: AppTheme.crust,
+                  backgroundColor: c.blue,
+                  foregroundColor: c.crust,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
                 child: _isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 22,
                         height: 22,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.5,
-                          color: AppTheme.crust,
+                          color: c.crust,
                         ),
                       )
                     : Text(
@@ -394,7 +430,7 @@ class _AuthScreenState extends State<AuthScreen>
     );
   }
 
-  Widget _roleChip(UserRole role, String label, IconData icon) {
+  Widget _roleChip(UserRole role, String label, IconData icon, ThemeColors c) {
     final isSelected = _selectedRole == role;
     return Expanded(
       child: GestureDetector(
@@ -404,11 +440,11 @@ class _AuthScreenState extends State<AuthScreen>
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
             color: isSelected
-                ? AppTheme.blue.withValues(alpha: 0.15)
-                : AppTheme.surface0.withValues(alpha: 0.5),
+                ? c.blue.withValues(alpha: 0.15)
+                : c.surface0.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isSelected ? AppTheme.blue : AppTheme.surface0,
+              color: isSelected ? c.blue : c.surface0,
               width: isSelected ? 2 : 1,
             ),
           ),
@@ -417,12 +453,12 @@ class _AuthScreenState extends State<AuthScreen>
             children: [
               Icon(icon,
                   size: 20,
-                  color: isSelected ? AppTheme.blue : AppTheme.overlay0),
+                  color: isSelected ? c.blue : c.overlay0),
               const SizedBox(width: 8),
               Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? AppTheme.blue : AppTheme.text,
+                  color: isSelected ? c.blue : c.text,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   fontSize: 14,
                 ),
@@ -434,20 +470,20 @@ class _AuthScreenState extends State<AuthScreen>
     );
   }
 
-  Widget _buildToggle() {
+  Widget _buildToggle(ThemeColors c) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
           _isLogin ? "Don't have an account? " : 'Already have an account? ',
-          style: const TextStyle(color: AppTheme.overlay0, fontSize: 14),
+          style: TextStyle(color: c.overlay0, fontSize: 14),
         ),
         GestureDetector(
           onTap: _toggleMode,
           child: Text(
             _isLogin ? 'Sign Up' : 'Sign In',
-            style: const TextStyle(
-              color: AppTheme.blue,
+            style: TextStyle(
+              color: c.blue,
               fontSize: 14,
               fontWeight: FontWeight.w700,
             ),

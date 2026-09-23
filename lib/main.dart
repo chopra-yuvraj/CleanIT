@@ -158,8 +158,34 @@ class _AuthGateState extends State<_AuthGate> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      final primary = Theme.of(context).colorScheme.primary;
+      final c = AppTheme.of(context);
       return Scaffold(
+        backgroundColor: c.crust,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          actions: [
+            ValueListenableBuilder<ThemeMode>(
+              valueListenable: themeNotifier,
+              builder: (context, mode, _) {
+                return IconButton(
+                  icon: Icon(
+                    mode == ThemeMode.dark
+                        ? Icons.light_mode_rounded
+                        : Icons.dark_mode_rounded,
+                    color: c.overlay0,
+                  ),
+                  tooltip: 'Toggle theme',
+                  onPressed: () {
+                    themeNotifier.value = themeNotifier.value == ThemeMode.dark
+                        ? ThemeMode.light
+                        : ThemeMode.dark;
+                  },
+                );
+              },
+            ),
+          ],
+        ),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -169,11 +195,11 @@ class _AuthGateState extends State<_AuthGate> {
                 height: 72,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: primary.withValues(alpha: 0.1),
+                  color: c.blue.withValues(alpha: 0.1),
                 ),
                 child: Icon(
                   Icons.cleaning_services_rounded,
-                  color: primary,
+                  color: c.blue,
                   size: 36,
                 ),
               ),
@@ -182,6 +208,7 @@ class _AuthGateState extends State<_AuthGate> {
                 'CleanIT',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.w800,
+                      color: c.text,
                     ),
               ),
               const SizedBox(height: 24),
@@ -190,7 +217,7 @@ class _AuthGateState extends State<_AuthGate> {
                 height: 28,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  color: primary,
+                  color: c.blue,
                 ),
               ),
             ],
