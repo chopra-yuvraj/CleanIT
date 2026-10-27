@@ -88,7 +88,7 @@ router.post('/', auth, roleGuard('student'), async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 router.get('/open', auth, roleGuard('cleaner', 'admin'), async (req, res) => {
   try {
-    const requests = await Request.find({ status: 'OPEN' })
+    const requests = await Request.find({ status: 'OPEN', isDeleted: { $ne: true } })
       .sort({ isUrgent: -1, createdAt: 1 }) // Urgent first, then oldest
       .lean(); // ← Returns plain JS objects (faster, no Mongoose overhead)
 
@@ -112,7 +112,7 @@ router.get('/open', auth, roleGuard('cleaner', 'admin'), async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 router.get('/my', auth, async (req, res) => {
   try {
-    const requests = await Request.find({ studentId: req.userId })
+    const requests = await Request.find({ studentId: req.userId, isDeleted: { $ne: true } })
       .sort({ createdAt: -1 })
       .limit(20)
       .lean();
@@ -147,6 +147,7 @@ router.get('/active', auth, async (req, res) => {
     const request = await Request.findOne({
       studentId: req.userId,
       status: { $in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] },
+      isDeleted: { $ne: true },
     })
       .sort({ createdAt: -1 })
       .lean();
@@ -185,6 +186,7 @@ router.get('/cleaner-jobs', auth, roleGuard('cleaner', 'admin'), async (req, res
     const jobs = await Request.find({
       'assignment.cleanerId': req.userId,
       status: { $in: ['ASSIGNED', 'IN_PROGRESS'] },
+      isDeleted: { $ne: true },
     })
       .sort({ createdAt: -1 })
       .lean();

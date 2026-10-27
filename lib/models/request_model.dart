@@ -51,7 +51,7 @@ enum RequestStatus {
       case RequestStatus.completed:
         return 'Completed';
       case RequestStatus.cancelledRoomLocked:
-        return 'Cancelled — Room Locked';
+        return 'Cancelled (Room Locked)';
     }
   }
 

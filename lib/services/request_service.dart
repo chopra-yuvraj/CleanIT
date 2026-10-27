@@ -111,6 +111,30 @@ class RequestService {
     }
   }
 
+  /// Student soft-deletes a COMPLETED or CANCELLED_ROOM_LOCKED request.
+  /// (DELETE /api/requests/:id)
+  Future<Map<String, dynamic>> deleteRequest(String requestId) async {
+    try {
+      final response = await _api.delete('/requests/$requestId');
+      return {
+        'success': response['success'] ?? true,
+        'message': response['message'] ?? 'Request deleted.',
+      };
+    } on ApiException catch (e) {
+      return {
+        'success': false,
+        'code': e.code ?? 'ERROR',
+        'message': e.message,
+      };
+    } catch (e) {
+      debugPrint('Delete request error: $e');
+      return {
+        'success': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
   Future<void> submitFeedback({
     required String requestId,
     required String studentId,

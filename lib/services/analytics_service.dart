@@ -6,6 +6,7 @@
 import 'api_client.dart';
 import '../models/analytics_model.dart';
 import '../models/request_model.dart';
+import '../models/user_model.dart';
 
 class AnalyticsService {
   AnalyticsService._();
@@ -18,6 +19,23 @@ class AnalyticsService {
     final response = await _api.get('/analytics/overview');
     return AnalyticsOverview.fromJson(
       response['overview'] as Map<String, dynamic>,
+    );
+  }
+
+  /// Fetch cleaner performance summary (GET /api/analytics/cleaner-summary/:id)
+  Future<CleanerSummary> fetchCleanerSummary(String cleanerId) async {
+    final response = await _api.get('/analytics/cleaner-summary/$cleanerId');
+    return CleanerSummary.fromJson(
+      response['summary'] as Map<String, dynamic>,
+    );
+  }
+
+  /// Fetch task distribution using $facet parallel sub-pipelines
+  /// (GET /api/analytics/task-distribution)
+  Future<TaskDistribution> fetchTaskDistribution() async {
+    final response = await _api.get('/analytics/task-distribution');
+    return TaskDistribution.fromJson(
+      response['taskDistribution'] as Map<String, dynamic>? ?? {},
     );
   }
 
@@ -103,5 +121,36 @@ class AnalyticsService {
   /// Restore a soft-deleted request
   Future<Map<String, dynamic>> restoreRequest(String id) async {
     return await _api.put('/admin/restore-request/$id');
+  }
+
+  /// Fetch all users with optional role and search filter
+  Future<List<AppUser>> fetchUsers({String? role, String? search}) async {
+    final queryParams = <String>[];
+    if (role != null && role.isNotEmpty) queryParams.add('role=$role');
+    if (search != null && search.isNotEmpty) queryParams.add('search=${Uri.encodeComponent(search)}');
+    final queryStr = queryParams.isNotEmpty ? '?${queryParams.join('&')}' : '';
+    final response = await _api.get('/admin/users$queryStr');
+    final users = response['users'] as List<dynamic>? ?? [];
+    return users.map((u) => AppUser.fromJson(u as Map<String, dynamic>)).toList();
+  }
+
+  /// Update user role (PUT /api/admin/users/:id/role)
+  Future<Map<String, dynamic>> updateUserRole({
+    required String userId,
+    required String role,
+  }) async {
+    return await _api.put('/admin/users/$userId/role', body: {'role': role});
+  }
+
+  /// Bulk cancel stale open requests (PUT /api/admin/bulk-cancel)
+  Future<Map<String, dynamic>> bulkCancelRequests({int olderThanHours = 24}) async {
+    return await _api.put('/admin/bulk-cancel', body: {'olderThanHours': olderThanHours});
+  }
+
+  /// Explain query execution plan (GET /api/dbms/explain)
+  Future<List<ExplainResultItem>> fetchExplain() async {
+    final response = await _api.get('/dbms/explain');
+    final results = response['explainResults'] as List<dynamic>? ?? [];
+    return results.map((r) => ExplainResultItem.fromJson(r as Map<String, dynamic>)).toList();
   }
 }

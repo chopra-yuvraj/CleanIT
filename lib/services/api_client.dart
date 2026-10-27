@@ -102,6 +102,13 @@ class ApiClient {
     return _handleResponse(response);
   }
 
+  /// DELETE request
+  Future<Map<String, dynamic>> delete(String path) async {
+    final url = Uri.parse('${AppConfig.apiBaseUrl}$path');
+    final response = await http.delete(url, headers: await _headers());
+    return _handleResponse(response);
+  }
+
   /// Parse and handle HTTP response
   Map<String, dynamic> _handleResponse(http.Response response) {
     try {

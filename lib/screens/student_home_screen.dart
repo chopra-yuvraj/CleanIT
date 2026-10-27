@@ -1,4 +1,4 @@
-// CleanIT — Student Home Screen
+ // CleanIT — Student Home Screen
 //
 // Main dashboard for students with:
 // - "Request Room Cleaning" hero button
@@ -16,6 +16,7 @@ import '../services/services.dart';
 import 'new_request_screen.dart';
 import 'active_job_screen.dart';
 import 'auth_screen.dart';
+import 'profile_settings_screen.dart';
 
 class StudentHomeScreen extends StatefulWidget {
   const StudentHomeScreen({super.key});
@@ -214,6 +215,84 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     }
   }
 
+  /// Student soft-delete: removes completed or cancelled job from history
+  Future<void> _deleteRequest(CleaningRequest r) async {
+    final c = AppTheme.of(context);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: c.base,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: c.red.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.delete_outline_rounded, color: c.red, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Remove from history?',
+              style: GoogleFonts.outfit(
+                color: c.text,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'This will clear it from your view.',
+          style: TextStyle(color: c.subtext0, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: TextStyle(color: c.overlay0)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: c.red,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Remove', style: TextStyle(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    // Immediately remove from visible list for instant UI feedback
+    setState(() {
+      _history.removeWhere((item) => item.id == r.id);
+    });
+
+    try {
+      final res = await _requestService.deleteRequest(r.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res['message'] ?? 'Request deleted (soft delete).'),
+            backgroundColor: c.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _loadData();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = AppTheme.of(context);
@@ -231,6 +310,16 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: Icon(Icons.settings_outlined, color: c.text),
+            tooltip: 'Profile & Settings',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileSettingsScreen()),
+              ).then((_) => _loadData());
+            },
+          ),
           ValueListenableBuilder<ThemeMode>(
             valueListenable: themeNotifier,
             builder: (context, mode, _) {
@@ -293,15 +382,20 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                   // ── Recent History ──
                   _buildSectionTitle('Recent History', c),
                   const SizedBox(height: 14),
-                  if (_history.isEmpty)
-                    _buildEmptyState(c)
-                  else
-                    // Show all non-active history PLUS any OPEN requests
-                    // (OPEN = broadcast, no cleaner yet → student can cancel)
-                    ..._history
-                        .where((r) => !r.status.isActive || r.status == RequestStatus.open)
-                        .take(10)
-                        .map((r) => _buildHistoryCard(r, c)),
+                  Builder(
+                    builder: (context) {
+                      final historyItems = _history
+                          .where((r) => !r.status.isActive || r.status == RequestStatus.open)
+                          .take(10)
+                          .toList();
+                      if (historyItems.isEmpty) {
+                        return _buildEmptyState(c);
+                      }
+                      return Column(
+                        children: historyItems.map((r) => _buildHistoryCard(r, c)).toList(),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -614,14 +708,39 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Text(
-                        r.status.displayLabel,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: statusColor,
-                          fontWeight: FontWeight.w600,
+                      if (r.status == RequestStatus.cancelledRoomLocked)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: c.red.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: c.red.withValues(alpha: 0.35)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.lock_rounded, size: 12, color: c.red),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Cancelled (Room Locked)',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: c.red,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        Text(
+                          r.status.displayLabel,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: statusColor,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
                       if (isOpen) ...[
                         const SizedBox(width: 6),
                         Text('· waiting for cleaner',
@@ -634,7 +753,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            // Time OR cancel button for OPEN requests
+            // Time OR cancel button for OPEN requests / delete button for finished requests
             if (isOpen)
               Tooltip(
                 message: 'Cancel this request',
@@ -655,9 +774,41 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                 ),
               )
             else
-              Text(
-                _timeAgo(r.createdAt),
-                style: TextStyle(color: c.overlay0, fontSize: 12),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _timeAgo(r.createdAt),
+                    style: TextStyle(color: c.overlay0, fontSize: 12),
+                  ),
+                  if (r.status == RequestStatus.completed ||
+                      r.status == RequestStatus.cancelledRoomLocked) ...[
+                    const SizedBox(width: 10),
+                    Tooltip(
+                      message: 'Remove from history',
+                      child: InkWell(
+                        onTap: () => _deleteRequest(r),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: c.red.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: c.red.withValues(alpha: 0.35),
+                              width: 1,
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.delete_outline_rounded,
+                            color: c.red,
+                            size: 19,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
           ],
         ),

@@ -108,6 +108,34 @@ class AuthService {
     }
   }
 
+  /// Change user password (PUT /api/auth/change-password)
+  Future<Map<String, dynamic>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _api.put('/auth/change-password', body: {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      });
+      return {
+        'success': response['success'] ?? true,
+        'message': response['message'] ?? 'Password changed successfully.',
+      };
+    } on ApiException catch (e) {
+      return {
+        'success': false,
+        'code': e.code,
+        'message': e.message,
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
   /// Sign out
   Future<void> signOut() async {
     _cachedProfile = null;

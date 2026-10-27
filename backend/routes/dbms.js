@@ -53,15 +53,21 @@ router.get('/explain', auth, async (req, res) => {
     const extractStats = (explain) => {
       const stats = explain.executionStats || {};
       const stage = stats.executionStages || {};
+      const winningPlan = explain.queryPlanner?.winningPlan?.stage || stage.stage || 'N/A';
+      const inputStage = explain.queryPlanner?.winningPlan?.inputStage || stage.inputStage;
+      const indexUsed = inputStage?.indexName || 'NONE (COLLSCAN)';
+      const isIxscan = stats.totalKeysExamined > 0 || winningPlan === 'IXSCAN' || inputStage?.stage === 'IXSCAN';
+
       return {
-        executionTimeMs: stats.executionTimeMillis,
-        totalDocsExamined: stats.totalDocsExamined,
-        totalKeysExamined: stats.totalKeysExamined,
-        nReturned: stats.nReturned,
-        winningPlan: explain.queryPlanner?.winningPlan?.stage || stage.stage || 'N/A',
-        indexUsed: explain.queryPlanner?.winningPlan?.inputStage?.indexName
-          || stage.inputStage?.indexName || 'NONE (COLLSCAN)',
-        explanation: stats.totalKeysExamined > 0
+        executionTimeMillis: stats.executionTimeMillis ?? 0,
+        executionTimeMs: stats.executionTimeMillis ?? 0,
+        totalDocsExamined: stats.totalDocsExamined ?? 0,
+        totalKeysExamined: stats.totalKeysExamined ?? 0,
+        nReturned: stats.nReturned ?? 0,
+        winningPlanStage: isIxscan ? 'IXSCAN' : winningPlan,
+        winningPlan: winningPlan,
+        indexUsed: indexUsed,
+        explanation: isIxscan
           ? 'IXSCAN — Index was used. Only relevant index entries were scanned.'
           : 'COLLSCAN — Full collection scan. Every document was examined.',
       };

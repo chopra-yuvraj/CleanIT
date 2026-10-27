@@ -379,10 +379,18 @@ const seed = async () => {
       },
     },
     {
+      studentId: students[7]._id, status: 'OPEN',
+      isSweeping: true, isMopping: false, isUrgent: false,
+      notes: 'Regular sweep please before tomorrow morning class',
+      studentName: students[7].name, studentBlock: 'C', studentRoom: '312',
+      createdAt: hoursAfter(daysAgo(0), -3),
+    },
+    {
       studentId: students[6]._id, status: 'OPEN',
       isSweeping: true, isMopping: true, isUrgent: true,
-      notes: 'Emergency cleaning request — allergic reaction to dust',
+      notes: 'Urgent emergency cleaning request — severe dust allergic reaction',
       studentName: students[6].name, studentBlock: 'A', studentRoom: '403',
+      createdAt: hoursAfter(daysAgo(0), -1),
     },
   ];
 

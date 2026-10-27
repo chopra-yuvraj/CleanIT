@@ -12,7 +12,7 @@ class AppConfig {
   // or http://localhost:3000 (web / iOS simulator).
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://cleanit-backend-v9h0.onrender.com/api', // Points to live Render backend
+    defaultValue: 'http://localhost:3000/api', // Local backend server
   );
 
   // ── QR Signing ──

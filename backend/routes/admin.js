@@ -282,13 +282,14 @@ router.get('/db-stats', auth, async (req, res) => {
 //  Changes user role and creates audit log atomically.
 // ─────────────────────────────────────────────────────────────
 router.put('/users/:id/role', auth, async (req, res) => {
-  const session = await mongoose.startSession();
-  try {
-    const { role } = req.body;
-    if (!['student', 'cleaner', 'admin'].includes(role)) {
-      return res.status(400).json({ error: 'Invalid role' });
-    }
+  const { role } = req.body;
+  if (!['student', 'cleaner', 'admin'].includes(role)) {
+    return res.status(400).json({ error: 'Invalid role' });
+  }
 
+  let session = null;
+  try {
+    session = await mongoose.startSession();
     let result;
     await session.withTransaction(async () => {
       const user = await User.findById(req.params.id).session(session);
@@ -319,10 +320,33 @@ router.put('/users/:id/role', auth, async (req, res) => {
     if (error.message === 'USER_NOT_FOUND') {
       return res.status(404).json({ error: 'User not found' });
     }
+    // Fallback if standalone MongoDB without replica set
+    if (error.message?.includes('replica set') || error.message?.includes('Transaction numbers')) {
+      try {
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        const oldRole = user.role;
+        user.role = role;
+        await user.save();
+        await AuditLog.create({
+          collection: 'users',
+          documentId: user._id,
+          action: 'UPDATE',
+          performedBy: req.userId,
+          performedByName: req.user.name,
+          changes: { role: { from: oldRole, to: role } },
+          summary: `Role changed from ${oldRole} to ${role} for ${user.name}`,
+        });
+        return res.json({ success: true, id: user._id.toString(), name: user.name, oldRole, newRole: role });
+      } catch (err2) {
+        console.error('Fallback role update error:', err2);
+        return res.status(500).json({ error: 'Failed to update role' });
+      }
+    }
     console.error('Role update error:', error);
     res.status(500).json({ error: 'Failed to update role' });
   } finally {
-    await session.endSession();
+    if (session) await session.endSession();
   }
 });
 

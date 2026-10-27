@@ -183,3 +183,116 @@ class AuditLogEntry {
     );
   }
 }
+
+class CleanerSummary {
+  final String cleanerId;
+  final String cleanerName;
+  final bool isOnDuty;
+  final int totalJobs;
+  final int completedJobs;
+  final int cancelledJobs;
+  final double avgCompletionMinutes;
+  final double? avgRating;
+  final int totalRatings;
+  final String? busiestDayName;
+  final int busiestDayCount;
+
+  CleanerSummary({
+    required this.cleanerId,
+    required this.cleanerName,
+    required this.isOnDuty,
+    required this.totalJobs,
+    required this.completedJobs,
+    required this.cancelledJobs,
+    required this.avgCompletionMinutes,
+    this.avgRating,
+    required this.totalRatings,
+    this.busiestDayName,
+    this.busiestDayCount = 0,
+  });
+
+  factory CleanerSummary.fromJson(Map<String, dynamic> json) {
+    final busiest = json['busiestDay'] as Map<String, dynamic>?;
+    return CleanerSummary(
+      cleanerId: (json['cleanerId'] ?? '') as String,
+      cleanerName: (json['cleanerName'] ?? 'Cleaner') as String,
+      isOnDuty: json['isOnDuty'] as bool? ?? false,
+      totalJobs: (json['totalJobs'] ?? 0) as int,
+      completedJobs: (json['completedJobs'] ?? 0) as int,
+      cancelledJobs: (json['cancelledJobs'] ?? 0) as int,
+      avgCompletionMinutes: (json['avgCompletionMinutes'] ?? 0).toDouble(),
+      avgRating: json['avgRating'] != null ? (json['avgRating'] as num).toDouble() : null,
+      totalRatings: (json['totalRatings'] ?? 0) as int,
+      busiestDayName: busiest?['dayName'] as String?,
+      busiestDayCount: (busiest?['count'] ?? 0) as int,
+    );
+  }
+}
+
+class TaskDistribution {
+  final int sweepingOnly;
+  final int moppingOnly;
+  final int both;
+  final int urgent;
+
+  TaskDistribution({
+    required this.sweepingOnly,
+    required this.moppingOnly,
+    required this.both,
+    required this.urgent,
+  });
+
+  int get total => sweepingOnly + moppingOnly + both;
+
+  factory TaskDistribution.fromJson(Map<String, dynamic> json) {
+    return TaskDistribution(
+      sweepingOnly: (json['sweepingOnly'] ?? 0) as int,
+      moppingOnly: (json['moppingOnly'] ?? 0) as int,
+      both: (json['both'] ?? 0) as int,
+      urgent: (json['urgent'] ?? 0) as int,
+    );
+  }
+}
+
+class ExplainResultItem {
+  final String query;
+  final String filter;
+  final String? sort;
+  final String expectedIndex;
+  final int executionTimeMillis;
+  final int totalDocsExamined;
+  final int totalKeysExamined;
+  final String winningPlanStage;
+  final String indexUsed;
+  final String explanation;
+
+  ExplainResultItem({
+    required this.query,
+    required this.filter,
+    this.sort,
+    required this.expectedIndex,
+    required this.executionTimeMillis,
+    required this.totalDocsExamined,
+    required this.totalKeysExamined,
+    required this.winningPlanStage,
+    required this.indexUsed,
+    required this.explanation,
+  });
+
+  factory ExplainResultItem.fromJson(Map<String, dynamic> json) {
+    final stats = json['stats'] as Map<String, dynamic>? ?? {};
+    return ExplainResultItem(
+      query: (json['query'] ?? '') as String,
+      filter: (json['filter'] ?? '') as String,
+      sort: json['sort'] as String?,
+      expectedIndex: (json['expectedIndex'] ?? '') as String,
+      executionTimeMillis: (stats['executionTimeMillis'] ?? stats['executionTimeMs'] ?? 0) as int,
+      totalDocsExamined: (stats['totalDocsExamined'] ?? 0) as int,
+      totalKeysExamined: (stats['totalKeysExamined'] ?? 0) as int,
+      winningPlanStage: (stats['winningPlanStage'] ?? stats['winningPlan'] ?? 'COLLSCAN') as String,
+      indexUsed: (stats['indexUsed'] ?? 'NONE') as String,
+      explanation: (stats['explanation'] ?? '') as String,
+    );
+  }
+}
+
